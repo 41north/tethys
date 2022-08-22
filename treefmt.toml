@@ -1,0 +1,27 @@
+# One CLI to format the code tree - https://github.com/numtide/treefmt
+
+[formatter.nix]
+command = "alejandra"
+includes = ["*.nix"]
+
+[formatter.golang]
+command = "goimports"
+options = ["-w"]
+includes = ["*.go"]
+excludes = ["*.pb.go$"]
+
+[formatter.prettier]
+command = "prettier"
+options = ["--write"]
+includes = [
+  "*.css",
+  "*.html",
+  "*.js",
+  "*.json",
+  "*.jsx",
+  "*.md",
+  "*.mdx",
+  "*.scss",
+  "*.ts",
+  "*.tsx",
+]
