@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/41north/web3/pkg/jsonrpc"
+	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/nats-io/nats.go"
 )
 

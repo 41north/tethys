@@ -1,12 +1,13 @@
 package proxy
 
 import (
-	natseth "github.com/41north/web3/pkg/eth/nats"
 	"strconv"
 	"sync"
 
-	"github.com/41north/web3/pkg/eth"
-	natsutil "github.com/41north/web3/pkg/nats"
+	natseth "github.com/41north/tethys/pkg/eth/nats"
+
+	"github.com/41north/tethys/pkg/eth"
+	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 )

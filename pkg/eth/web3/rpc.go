@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/41north/web3/pkg/async"
-	"github.com/41north/web3/pkg/jsonrpc"
+	"github.com/41north/tethys/pkg/async"
+	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/juju/errors"
 	"golang.org/x/sync/errgroup"

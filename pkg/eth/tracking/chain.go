@@ -8,9 +8,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/41north/web3/pkg/eth"
-	natsutil "github.com/41north/web3/pkg/nats"
-	"github.com/41north/web3/pkg/util"
+	"github.com/41north/tethys/pkg/eth"
+	natsutil "github.com/41north/tethys/pkg/nats"
+	"github.com/41north/tethys/pkg/util"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"

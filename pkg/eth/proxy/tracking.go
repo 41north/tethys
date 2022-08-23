@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"github.com/41north/web3/pkg/eth/tracking"
+	"github.com/41north/tethys/pkg/eth/tracking"
 	"github.com/juju/errors"
 )
 

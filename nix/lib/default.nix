@@ -23,7 +23,7 @@ in {
       CGO_ENABLED = 0;
       subPackages = [package];
       meta = {
-        homepage = "https://github.com/41north/web3";
+        homepage = "https://github.com/41north/tethys";
         description = "";
         license = licenses.unlicense;
       };

@@ -1,4 +1,4 @@
-module github.com/41north/web3
+module github.com/41north/tethys
 
 go 1.18
 
