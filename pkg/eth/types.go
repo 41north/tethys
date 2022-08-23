@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/41north/web3/pkg/eth/web3"
+	"github.com/41north/tethys/pkg/eth/web3"
 )
 
 type NetworkAndChainId struct {

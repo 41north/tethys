@@ -73,13 +73,13 @@ nix-build-all: (nix-build-docker-images) (nix-build-binaries)
 
 # Builds only the binaries using nix
 nix-build-binaries:
-  nix build -o result-web3-proxy .#web3-proxy
-  nix build -o result-web3-sidecar .#web3-sidecar
+  nix build -o result-tethys-proxy .#tethys-proxy
+  nix build -o result-tethys-sidecar .#tethys-sidecar
 
 # Builds the docker images and loads them into docker
 nix-build-docker-images:
-  nix build -o result-web3-proxy-docker .#web3-proxy-docker && docker load < result-web3-proxy-docker
-  nix build -o result-web3-sidecar-docker .#web3-sidecar-docker && docker load < result-web3-sidecar-docker
+  nix build -o result-tethys-proxy-docker .#tethys-proxy-docker && docker load < result-tethys-proxy-docker
+  nix build -o result-tethys-sidecar-docker .#tethys-sidecar-docker && docker load < result-tethys-sidecar-docker
 
 # Checks the source with nix
 nix-check:

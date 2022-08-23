@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/41north/web3/pkg/async"
+	"github.com/41north/tethys/pkg/async"
 
-	"github.com/41north/web3/pkg/util"
+	"github.com/41north/tethys/pkg/util"
 	"github.com/google/uuid"
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus"

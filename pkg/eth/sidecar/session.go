@@ -3,13 +3,14 @@ package sidecar
 import (
 	"context"
 	"fmt"
-	natseth "github.com/41north/web3/pkg/eth/nats"
 	"strconv"
 	"time"
 
-	"github.com/41north/web3/pkg/eth"
-	"github.com/41north/web3/pkg/eth/web3"
-	natsutil "github.com/41north/web3/pkg/nats"
+	natseth "github.com/41north/tethys/pkg/eth/nats"
+
+	"github.com/41north/tethys/pkg/eth"
+	"github.com/41north/tethys/pkg/eth/web3"
+	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/41north/web3/pkg/jsonrpc"
+	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/41north/web3/pkg/eth/web3"
-	"github.com/41north/web3/pkg/jsonrpc"
-	"github.com/41north/web3/pkg/util"
+	"github.com/41north/tethys/pkg/eth/web3"
+	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/tethys/pkg/util"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"

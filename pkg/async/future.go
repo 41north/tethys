@@ -3,7 +3,7 @@ package async
 import (
 	"context"
 
-	"github.com/41north/web3/pkg/util"
+	"github.com/41north/tethys/pkg/util"
 )
 
 type Future[T any] interface {

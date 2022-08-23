@@ -2,8 +2,9 @@ package nats
 
 import (
 	"fmt"
-	"github.com/41north/web3/pkg/eth"
-	natsutil "github.com/41north/web3/pkg/nats"
+
+	"github.com/41north/tethys/pkg/eth"
+	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 )

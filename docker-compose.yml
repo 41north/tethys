@@ -1,8 +1,8 @@
 version: "3.8"
 
 networks:
-  web3:
-    name: web3
+  tethys:
+    name: tethys
     driver: bridge
     ipam:
       config:
@@ -20,7 +20,7 @@ services:
       - '6222:6222' # routing port for clustering
       - '8222:8222' # http management port for information reporting
     networks:
-      - web3
+      - tethys
 
   geth-bootnode:
     container_name: geth-bootnode
@@ -35,7 +35,7 @@ services:
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
     networks:
-      - web3
+      - tethys
 
   geth-miner:
     container_name: geth-miner
@@ -50,7 +50,7 @@ services:
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
     networks:
-      web3:
+      tethys:
 
   geth-rpc-1:
     container_name: geth-rpc-1
@@ -76,16 +76,16 @@ services:
       - '8545:8545'
       - '8546:8546'
     networks:
-      - web3
+      - tethys
 
   geth-rpc-1-sidecar:
     container_name: geth-rpc-1-sidecar
-    image: 41north/web3-sidecar:dev
+    image: 41north/tethys-sidecar:dev
     depends_on:
       - nats
       - geth-rpc-1
     networks:
-      - web3
+      - tethys
     restart: on-failure
     command:
       - eth
@@ -114,16 +114,16 @@ services:
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
     networks:
-      - web3
+      - tethys
 
   geth-rpc-2-sidecar:
     container_name: geth-rpc-2-sidecar
-    image: 41north/web3-sidecar:dev
+    image: 41north/tethys-sidecar:dev
     depends_on:
       - nats
       - geth-rpc-2
     networks:
-      - web3
+      - tethys
     restart: on-failure
     command:
       - eth
@@ -152,16 +152,16 @@ services:
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
     networks:
-      - web3
+      - tethys
 
   geth-rpc-3-sidecar:
     container_name: geth-rpc-3-sidecar
-    image: 41north/web3-sidecar:dev
+    image: 41north/tethys-sidecar:dev
     depends_on:
       - nats
       - geth-rpc-3
     networks:
-      - web3
+      - tethys
     restart: on-failure
     command:
       - eth
@@ -171,11 +171,11 @@ services:
 
   proxy:
     container_name: proxy
-    image: 41north/web3-proxy:dev
+    image: 41north/tethys-proxy:dev
     depends_on:
       - nats
     networks:
-      - web3
+      - tethys
     ports:
       - '8080:8080'
     restart: on-failure

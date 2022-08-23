@@ -73,31 +73,31 @@
         vendorSha256 = "sha256-7MpZnG+KtBuGpcWy/01sx+m6h3AB8qCfH88g6z948dU=";
       in
         flattenTree rec {
-          web3-proxy = buildGoApp {
+          tethys-proxy = buildGoApp {
             inherit vendorSha256;
-            name = "web3-proxy";
+            name = "tethys-proxy";
             src = self;
             package = "cmd/proxy";
           };
-          web3-proxy-docker = dockerTools.buildLayeredImage {
-            name = "41north/${web3-proxy.name}";
+          tethys-proxy-docker = dockerTools.buildLayeredImage {
+            name = "41north/${tethys-proxy.name}";
             tag = "dev";
             maxLayers = 15;
             created = "now";
-            config.Entrypoint = ["${web3-proxy}/bin/proxy"];
+            config.Entrypoint = ["${tethys-proxy}/bin/proxy"];
           };
-          web3-sidecar = buildGoApp {
+          tethys-sidecar = buildGoApp {
             inherit vendorSha256;
-            name = "web3-sidecar";
+            name = "tethys-sidecar";
             src = self;
             package = "cmd/sidecar";
           };
-          web3-sidecar-docker = dockerTools.buildLayeredImage {
-            name = "41north/${web3-sidecar.name}";
+          tethys-sidecar-docker = dockerTools.buildLayeredImage {
+            name = "41north/${tethys-sidecar.name}";
             tag = "dev";
             maxLayers = 15;
             created = "now";
-            config.Entrypoint = ["${web3-sidecar}/bin/sidecar"];
+            config.Entrypoint = ["${tethys-sidecar}/bin/sidecar"];
           };
         };
 
@@ -184,13 +184,13 @@
 
       # nix run .#<app>
       apps = {
-        web3-proxy = mkApp {
-          name = "web3-proxy";
-          drv = packages.web3-proxy;
+        tethys-proxy = mkApp {
+          name = "tethys-proxy";
+          drv = packages.tethys-proxy;
         };
-        web3-sidecar = mkApp {
-          name = "web3-sidecar";
-          drv = packages.web3-sidecar;
+        tethys-sidecar = mkApp {
+          name = "tethys-sidecar";
+          drv = packages.tethys-sidecar;
         };
       };
 

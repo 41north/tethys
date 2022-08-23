@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/41north/web3/pkg/eth/sidecar"
-	"github.com/41north/web3/pkg/process"
+	"github.com/41north/tethys/pkg/eth/sidecar"
+	"github.com/41north/tethys/pkg/process"
 )
 
 type ethSidecarCmd struct {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/41north/web3/pkg/async"
+	"github.com/41north/tethys/pkg/async"
 
-	"github.com/41north/web3/pkg/jsonrpc"
+	"github.com/41north/tethys/pkg/jsonrpc"
 	log "github.com/sirupsen/logrus"
 )
 

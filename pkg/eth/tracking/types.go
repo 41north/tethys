@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/41north/web3/pkg/util"
+	"github.com/41north/tethys/pkg/util"
 
 	"github.com/tidwall/btree"
 )
