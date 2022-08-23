@@ -2,8 +2,9 @@ package proxy
 
 import (
 	"context"
-	"github.com/juju/errors"
 	"net/url"
+
+	"github.com/juju/errors"
 )
 
 const (

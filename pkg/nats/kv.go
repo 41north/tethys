@@ -3,12 +3,21 @@ package nats
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/juju/errors"
+	"github.com/41north/tethys/pkg/async"
+	"github.com/41north/tethys/pkg/util"
 	"github.com/nats-io/nats.go"
+	"github.com/viney-shih/go-cache"
+
+	"github.com/juju/errors"
 )
+
+var sanitizeKeyRegex = regexp.MustCompile(`[^-/_=.a-zA-Z\d]+`)
 
 type KeyValueEntry[T any] interface {
 	// Bucket is the bucket the data was loaded from.
@@ -165,4 +174,133 @@ func (s kv[T]) Watch(key string, opts ...nats.WatchOpt) (KeyWatcher[T], error) {
 func (s kv[T]) WatchAll(opts ...nats.WatchOpt) (KeyWatcher[T], error) {
 	watcher, err := s.kv.WatchAll(opts...)
 	return kw[T]{delegate: watcher}, err
+}
+
+type CacheEntry struct{}
+
+type kvCacheAdapter struct {
+	kv nats.KeyValue
+}
+
+func (c kvCacheAdapter) sanitizeKey(key string) string {
+	prefix := fmt.Sprintf("ca:%s:", c.kv.Bucket())
+	// remove the prefix
+	result := strings.ReplaceAll(key, prefix, "")
+	// replace any invalid characters that remain
+	result = sanitizeKeyRegex.ReplaceAllString(result, "_")
+	return result
+}
+
+func (c kvCacheAdapter) MGet(ctx context.Context, keys []string) ([]cache.Value, error) {
+	resultsCh := make(chan util.Result[cache.Value])
+
+	go func() {
+		for _, key := range keys {
+			select {
+			case <-ctx.Done():
+				resultsCh <- util.NewResultErr[cache.Value](ctx.Err())
+			default:
+				entry, err := c.kv.Get(c.sanitizeKey(key))
+				if err != nil {
+					resultsCh <- util.NewResultErr[cache.Value](err)
+					continue
+				}
+				value := cache.Value{Valid: entry != nil}
+				if entry != nil {
+					value.Bytes = entry.Value()
+				}
+				resultsCh <- util.NewResult[cache.Value](&value)
+			}
+		}
+		close(resultsCh)
+	}()
+
+	results, err := async.NewFuture[cache.Value](resultsCh).AwaitAll(ctx)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to get all keys")
+	}
+
+	var values []cache.Value
+	for _, result := range results {
+		v, _ := result.Value()
+		//if err != nil {
+		//	return nil, errors.Annotate(err, "failed to get all keys")
+		//}
+
+		if v == nil {
+			v = &cache.Value{Valid: false}
+		}
+
+		values = append(values, *v)
+	}
+
+	return values, nil
+}
+
+func (c kvCacheAdapter) MSet(ctx context.Context, keyValues map[string][]byte, _ time.Duration, _ ...cache.MSetOptions) error {
+	for key, value := range keyValues {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			_, err := c.kv.Put(c.sanitizeKey(key), value)
+			if err != nil {
+				return errors.Annotate(err, "failed to write value to kv store")
+			}
+		}
+	}
+	return nil
+}
+
+func (c kvCacheAdapter) Del(ctx context.Context, keys ...string) error {
+	for _, key := range keys {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			err := c.kv.Delete(c.sanitizeKey(key))
+			if err != nil {
+				return errors.Annotate(err, "failed to delete from kv store")
+			}
+		}
+	}
+	return nil
+}
+
+func NewCache[V any](
+	name string,
+	localCacheSize int,
+	ttl time.Duration,
+	js nats.JetStreamContext,
+) cache.Cache {
+	kv, err := js.KeyValue(name)
+	// TODO for now we assume any error means the kv store doesn't exist
+	// TODO there are storage types and replica settings which we currently don't pass
+	// TODO how do we evolve cache settings?
+	if err != nil {
+		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
+			Bucket: name,
+			TTL:    ttl,
+		})
+	}
+
+	localCache := cache.NewTinyLFU(localCacheSize)
+	sharedCache := kvCacheAdapter{kv: kv}
+
+	factory := cache.NewFactory(sharedCache, localCache)
+	return factory.NewCache([]cache.Setting{
+		{
+			Prefix: name, // todo what's the correct mapping for this?
+			MarshalFunc: func(value interface{}) ([]byte, error) {
+				return json.Marshal(value)
+			},
+			UnmarshalFunc: func(bytes []byte, value interface{}) error {
+				return json.Unmarshal(bytes, value)
+			},
+			CacheAttributes: map[cache.Type]cache.Attribute{
+				cache.LocalCacheType:  {TTL: ttl}, // match the overall ttl for now
+				cache.SharedCacheType: {TTL: ttl}, // has no effect, but we set for consistency
+			},
+		},
+	})
 }

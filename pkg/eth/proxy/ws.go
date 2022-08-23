@@ -86,20 +86,8 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 			clientSubject := eth.SubjectName(subjectPrefix, clientId)
 
 			h.group.Go(func() error {
-				return invoke(clientSubject, &req, 10*time.Second, h.respCh)
+				return invokeWithCache(clientSubject, &req, 10*time.Second, h.respCh)
 			})
 		}
 	}
-}
-
-func invoke(subject string, req *jsonrpc.Request, timeout time.Duration, respCh chan<- *jsonrpc.Response) error {
-	resp := jsonrpc.Response{
-		Id: req.Id,
-	}
-	err := rpcClient.Invoke(subject, req, timeout, &resp)
-	if err != nil {
-		resp.Error = &jsonrpc.ErrInternal
-	}
-	respCh <- &resp
-	return err
 }

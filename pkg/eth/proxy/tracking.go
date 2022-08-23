@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	canonicalChain tracking.CanonicalChain
+	canonicalChain *tracking.CanonicalChain
 
 	balancer tracking.LoadBalancer
 )
@@ -22,7 +22,7 @@ func startTracking(opts Options) error {
 		return errors.Annotate(err, "failed to create canonical chain tracker")
 	}
 
-	lb, err := tracking.NewLatestBalancer(opts.NetworkId, opts.ChainId, 3)
+	lb, err := tracking.NewLatestBalancer(opts.NetworkId, opts.ChainId, 0)
 	if err != nil {
 		return errors.Annotate(err, "failed to create load balancer")
 	}
@@ -31,7 +31,7 @@ func startTracking(opts Options) error {
 	chain.Start()
 
 	// store in module context
-	canonicalChain = *chain
+	canonicalChain = chain
 	balancer = lb
 
 	return nil
