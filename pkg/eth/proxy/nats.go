@@ -21,6 +21,7 @@ const (
 var (
 	ns           *server.Server
 	natsConn     *nats.Conn
+	jsContext    nats.JetStreamContext
 	stateManager *natseth.StateManager
 
 	rpcClient     natsutil.RpcClient
@@ -75,13 +76,13 @@ func connectNats(opts Options) error {
 
 	natsConn = conn
 
-	js, err := conn.JetStream()
+	jsContext, err = conn.JetStream()
 	if err != nil {
 		return errors.Annotate(err, "failed to initialise JetStream context")
 	}
 
 	stateManager, err = natseth.NewStateManager(
-		js,
+		jsContext,
 		natseth.NetworkAndChainId(opts.NetworkId, opts.ChainId),
 		natseth.Create(true),
 	)

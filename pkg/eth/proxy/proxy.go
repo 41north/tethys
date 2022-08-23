@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"github.com/juju/errors"
 	"net/url"
 )
 
@@ -125,6 +126,10 @@ func ListenAndServe(ctx context.Context, options ...Option) error {
 
 	if err := connectNats(opts); err != nil {
 		return err
+	}
+
+	if err := InitCaches(opts); err != nil {
+		return errors.Annotate(err, "failed to initialise caches")
 	}
 
 	if err := startTracking(opts); err != nil {
