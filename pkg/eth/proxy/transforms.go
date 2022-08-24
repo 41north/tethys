@@ -22,7 +22,31 @@ var (
 	}
 
 	transformsByMethod = map[string]jsonrpc.RequestTransform{
-		"eth_getBlockByNumber": jsonrpc.NewRequestPipeline(
+		EthGetBlockByNumber: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(0, overrideLatestBlockParameter),
+		),
+		EthGetBalance: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(1, overrideLatestBlockParameter),
+		),
+		EthGetStorageAt: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(2, overrideLatestBlockParameter),
+		),
+		EthGetTransactionCount: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(1, overrideLatestBlockParameter),
+		),
+		EthGetBlockTransactionCountByNumber: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(0, overrideLatestBlockParameter),
+		),
+		EthGetUncleCountByNumber: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(0, overrideLatestBlockParameter),
+		),
+		EthGetCode: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(1, overrideLatestBlockParameter),
+		),
+		EthGetTransactionByBlockNumberAndIndex: jsonrpc.NewRequestPipeline(
+			jsonrpc.ReplaceParameterByIndex(0, overrideLatestBlockParameter),
+		),
+		EthGetUncleByBlockNumberAndIndex: jsonrpc.NewRequestPipeline(
 			jsonrpc.ReplaceParameterByIndex(0, overrideLatestBlockParameter),
 		),
 	}

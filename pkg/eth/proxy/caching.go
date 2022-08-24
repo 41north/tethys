@@ -25,7 +25,22 @@ type (
 
 var (
 	methodsToCache = map[string]bool{
-		"eth_getBlockByNumber": true,
+		EthGetBalance:                          true,
+		EthGetStorageAt:                        true,
+		EthGetBlockByNumber:                    true,
+		EthGetBlockByHash:                      true,
+		EthGetTransactionCount:                 true,
+		EthGetBlockTransactionCountByHash:      true,
+		EthGetBlockTransactionCountByNumber:    true,
+		EthGetUncleCountByBlockHash:            true,
+		EthGetUncleCountByNumber:               true,
+		EthGetCode:                             true,
+		EthGetTransactionByHash:                true,
+		EthGetTransactionByBlockHashAndIndex:   true,
+		EthGetTransactionByBlockNumberAndIndex: true,
+		EthGetTransactionReceipt:               true,
+		EthGetUncleByBlockHashAndIndex:         true,
+		EthGetUncleByBlockNumberAndIndex:       true,
 	}
 
 	respCachePrefix string
