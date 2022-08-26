@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/41north/tethys/pkg/async"
 	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/juju/errors"
@@ -60,7 +59,7 @@ func (c *Client) Close() {
 func (c *Client) Invoke(
 	ctx context.Context,
 	method string,
-	params any) async.Future[jsonrpc.Response] {
+	params any) (*jsonrpc.Response, error) {
 
 	req := &jsonrpc.Request{
 		Method: method,
@@ -69,7 +68,7 @@ func (c *Client) Invoke(
 	if params != nil {
 		bytes, err := json.Marshal(params)
 		if err != nil {
-			return async.NewFutureFailed[jsonrpc.Response](errors.Annotate(err, "failed to marshal params"))
+			return nil, errors.Annotate(err, "failed to marshal params")
 		}
 		req.Params = bytes
 	}
@@ -80,75 +79,99 @@ func (c *Client) Invoke(
 func (c *Client) InvokeRequest(
 	ctx context.Context,
 	req *jsonrpc.Request,
-) async.Future[jsonrpc.Response] {
+) (*jsonrpc.Response, error) {
 	return c.rpc.Invoke(ctx, req)
 }
 
-func unmarshal[T any](ctx context.Context, resp async.Future[jsonrpc.Response], proto T) async.Future[T] {
-	return async.Map(ctx, resp, func(from jsonrpc.Response) (*T, error) {
-		if from.Error != nil {
-			return nil, errors.Errorf("json rpc error, code = %d message = '%s'", from.Error.Code, from.Error.Message)
-		}
-		err := json.Unmarshal(from.Result, &proto)
-		return &proto, err
-	})
+func unmarshal[T any](resp *jsonrpc.Response, proto *T) error {
+	if resp.Error != nil {
+		return errors.Errorf("json rpc error, code = %d message = '%s'", resp.Error.Code, resp.Error.Message)
+	}
+	return json.Unmarshal(resp.Result, proto)
 }
 
-func (c *Client) BlockNumber(ctx context.Context) async.Future[big.Int] {
+func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
+	resp, err := c.Invoke(ctx, "eth_blockNumber", nil)
+	if err != nil {
+		return nil, err
+	}
 
-	resp := c.Invoke(ctx, "eth_blockNumber", nil)
-	unmarshalled := unmarshal[string](ctx, resp, "")
+	var hex string
+	if err = unmarshal[string](resp, &hex); err != nil {
+		return nil, err
+	}
 
-	return async.Map(ctx, unmarshalled, func(from string) (*big.Int, error) {
-		blockNumber, ok := math.ParseBig256(from)
-		if !ok {
-			return nil, errors.Errorf("Failed to parse block number: %s", blockNumber)
-		}
-		return blockNumber, nil
-	})
+	blockNumber, ok := math.ParseBig256(hex)
+	if !ok {
+		return nil, errors.Errorf("Failed to parse block number: %s", blockNumber)
+	}
+	return blockNumber, nil
 }
 
-func (c *Client) NetVersion(ctx context.Context) async.Future[string] {
-	resp := c.Invoke(ctx, "net_version", nil)
-	return unmarshal[string](ctx, resp, "")
+func (c *Client) NetVersion(ctx context.Context) (string, error) {
+	resp, err := c.Invoke(ctx, "net_version", nil)
+	if err != nil {
+		return "", err
+	}
+	var result string
+	err = unmarshal[string](resp, &result)
+	return result, err
 }
 
-func (c *Client) ChainId(ctx context.Context) async.Future[string] {
-	resp := c.Invoke(ctx, "eth_chainId", nil)
-	return unmarshal[string](ctx, resp, "")
+func (c *Client) ChainId(ctx context.Context) (string, error) {
+	resp, err := c.Invoke(ctx, "eth_chainId", nil)
+	if err != nil {
+		return "", err
+	}
+	var result string
+	err = unmarshal[string](resp, &result)
+	return result, err
 }
 
-func (c *Client) NodeInfo(ctx context.Context) async.Future[NodeInfo] {
-	resp := c.Invoke(ctx, "admin_nodeInfo", nil)
-	return unmarshal[NodeInfo](ctx, resp, NodeInfo{})
+func (c *Client) NodeInfo(ctx context.Context) (*NodeInfo, error) {
+	resp, err := c.Invoke(ctx, "admin_nodeInfo", nil)
+	if err != nil {
+		return nil, err
+	}
+	var result NodeInfo
+	err = unmarshal[NodeInfo](resp, &result)
+	return &result, err
 }
 
-func (c *Client) Web3ClientVersion(ctx context.Context) async.Future[ClientVersion] {
-	resp := c.Invoke(ctx, "web3_clientVersion", nil)
-	unmarshalled := unmarshal[string](ctx, resp, "")
-	return async.Map(ctx, unmarshalled, func(from string) (*ClientVersion, error) {
-		cv, err := ParseClientVersion(from)
-		return &cv, err
-	})
+func (c *Client) Web3ClientVersion(ctx context.Context) (*ClientVersion, error) {
+	resp, err := c.Invoke(ctx, "web3_clientVersion", nil)
+	if err != nil {
+		return nil, err
+	}
+	var result string
+	if err = unmarshal[string](resp, &result); err != nil {
+		return nil, err
+	}
+
+	cv, err := ParseClientVersion(result)
+	return &cv, err
 }
 
-func (c *Client) SyncProgress(ctx context.Context) async.Future[bool] {
-	resp := c.Invoke(ctx, "eth_syncing", nil)
-	unmarshalled := unmarshal[json.RawMessage](ctx, resp, json.RawMessage{})
-
-	// todo support progress fields
-	return async.Map(ctx, unmarshalled, func(from json.RawMessage) (*bool, error) {
-		var syncing bool
-		if err := json.Unmarshal(from, &syncing); err == nil {
-			return &syncing, nil
-		} else {
-			syncing = true
-		}
-		return &syncing, nil
-	})
+func (c *Client) SyncProgress(ctx context.Context) (bool, error) {
+	resp, err := c.Invoke(ctx, "eth_syncing", nil)
+	if err != nil {
+		return false, err
+	}
+	var syncing bool
+	if err := json.Unmarshal(resp.Result, &syncing); err == nil {
+		return syncing, nil
+	} else {
+		syncing = true
+	}
+	return syncing, nil
 }
 
-func (c *Client) LatestBlock(ctx context.Context) async.Future[Block] {
-	resp := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false})
-	return unmarshal[Block](ctx, resp, Block{})
+func (c *Client) LatestBlock(ctx context.Context) (*Block, error) {
+	resp, err := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false})
+	if err != nil {
+		return nil, err
+	}
+	var result Block
+	err = unmarshal[Block](resp, &result)
+	return &result, err
 }

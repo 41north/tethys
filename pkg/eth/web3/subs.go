@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/41north/tethys/pkg/async"
-
 	"github.com/41north/tethys/pkg/jsonrpc"
 	log "github.com/sirupsen/logrus"
 )
@@ -52,21 +50,31 @@ func (sm *subManager) close() {
 	})
 }
 
-func (c *Client) Subscribe(ctx context.Context, params []interface{}) async.Future[string] {
-	resp := c.Invoke(ctx, "eth_subscribe", params)
-	return unmarshal[string](ctx, resp, "")
+func (c *Client) Subscribe(ctx context.Context, params []interface{}) (string, error) {
+	resp, err := c.Invoke(ctx, "eth_subscribe", params)
+	if err != nil {
+		return "", err
+	}
+	var result string
+	err = unmarshal[string](resp, &result)
+	return result, err
 }
 
-func (c *Client) Unsubscribe(ctx context.Context, subscriptionId string) async.Future[bool] {
-	resp := c.Invoke(ctx, "eth_unsubscribe", []any{subscriptionId})
-	return unmarshal[bool](ctx, resp, false)
+func (c *Client) Unsubscribe(ctx context.Context, subscriptionId string) (bool, error) {
+	resp, err := c.Invoke(ctx, "eth_unsubscribe", []any{subscriptionId})
+	if err != nil {
+		return false, err
+	}
+	var result bool
+	err = unmarshal[bool](resp, &result)
+	return result, err
 }
 
-func (c *Client) SubscribeToSyncStatus(context context.Context) async.Future[string] {
+func (c *Client) SubscribeToSyncStatus(context context.Context) (string, error) {
 	return c.Subscribe(context, []any{"syncing"})
 }
 
-func (c *Client) SubscribeToNewHeads(context context.Context) async.Future[string] {
+func (c *Client) SubscribeToNewHeads(context context.Context) (string, error) {
 	return c.Subscribe(context, []any{"newHeads"})
 }
 

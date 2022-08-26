@@ -170,7 +170,7 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	nodeInfo, err := cs.client.NodeInfo(ctx).Await(ctx)
+	nodeInfo, err := cs.client.NodeInfo(ctx)
 	if err != nil {
 		return nil, errors.New("Could not retrieve client node info")
 	}
@@ -183,12 +183,12 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	networkIdStr, err := cs.client.NetVersion(ctx).Await(ctx)
+	networkIdStr, err := cs.client.NetVersion(ctx)
 	if err != nil {
 		return nil, errors.New("failed to retrieve network version")
 	}
 
-	networkId, err := strconv.ParseUint(*networkIdStr, 10, 64)
+	networkId, err := strconv.ParseUint(networkIdStr, 10, 64)
 	if err != nil {
 		return nil, errors.New("failed to parse network version")
 	}
@@ -196,12 +196,12 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	chainIdHex, err := cs.client.ChainId(ctx).Await(ctx)
+	chainIdHex, err := cs.client.ChainId(ctx)
 	if err != nil {
 		return nil, errors.New("failed to retrieve chain id")
 	}
 
-	chainId, err := hexutil.DecodeUint64(*chainIdHex)
+	chainId, err := hexutil.DecodeUint64(chainIdHex)
 	if err != nil {
 		return nil, errors.New("failed to parse chain id")
 	}
@@ -222,20 +222,20 @@ func (cs *clientSession) buildInitialClientStatus(profile *eth.ClientProfile) (*
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	syncing, err := cs.client.SyncProgress(ctx).Await(ctx)
+	syncing, err := cs.client.SyncProgress(ctx)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to get sync progress")
 	}
 
 	syncStatus := &web3.SyncStatus{
-		Syncing: *syncing,
+		Syncing: syncing,
 	}
 
 	// get latest block
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	latestBlock, err := cs.client.LatestBlock(ctx).Await(ctx)
+	latestBlock, err := cs.client.LatestBlock(ctx)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to get latest block")
 	}
@@ -288,15 +288,15 @@ func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
 	requestCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	subId, err := cs.client.SubscribeToNewHeads(requestCtx).Await(requestCtx)
+	subId, err := cs.client.SubscribeToNewHeads(requestCtx)
 	if err != nil {
 		return errors.Annotate(err, "failed to subscribe to new heads")
 	}
 
-	cs.subscriptionIds = append(cs.subscriptionIds, *subId)
+	cs.subscriptionIds = append(cs.subscriptionIds, subId)
 
 	//
-	newHeads := cs.client.HandleSubscription(*subId)
+	newHeads := cs.client.HandleSubscription(subId)
 
 	cs.group.Go(func() error {
 
@@ -356,7 +356,7 @@ func (cs *clientSession) onNewHead(notification *web3.SubscriptionNotification) 
 		requestCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		block, err := cs.client.LatestBlock(context.Background()).Await(requestCtx)
+		block, err := cs.client.LatestBlock(requestCtx)
 		if err != nil {
 			cs.log.WithError(err).Error("failed to fetch block")
 			return
