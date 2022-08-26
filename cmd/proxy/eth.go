@@ -17,6 +17,8 @@ func (cmd ethProxyCmd) toOptions() []proxy.Option {
 		proxy.NetworkId(cmd.NetworkId),
 		proxy.ChainId(cmd.ChainId),
 		proxy.NatsUrl(cmd.NatsURL),
+		proxy.NatsEmbedded(cmd.NatsEmbedded),
+		proxy.NatsEmbeddedConfigPath(cmd.NatsEmbeddedConfigPath),
 	}
 }
 

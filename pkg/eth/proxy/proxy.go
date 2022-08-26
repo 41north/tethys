@@ -6,13 +6,15 @@ import (
 )
 
 const (
-	DefaultAddress             = ":8080"
-	DefaultNetworkId           = uint64(1)
-	DefaultChainId             = uint64(1)
-	DefaultNatsUrl             = "ns://127.0.0.1:4222"
-	DefaultClientStatusBucket  = "eth_client_statuses"
-	DefaultClientProfileBucket = "eth_client_profiles"
-	DefaultMaxDistanceFromHead = 3
+	DefaultAddress                = ":8080"
+	DefaultNetworkId              = uint64(1)
+	DefaultChainId                = uint64(1)
+	DefaultNatsUrl                = "ns://127.0.0.1:4222"
+	DefaultNatsEmbedded           = false
+	DefaultNatsEmbeddedConfigPath = ""
+	DefaultClientStatusBucket     = "eth_client_statuses"
+	DefaultClientProfileBucket    = "eth_client_profiles"
+	DefaultMaxDistanceFromHead    = 3
 )
 
 type Option func(opts *Options) error
@@ -25,6 +27,10 @@ type Options struct {
 	ChainId uint64
 
 	NatsUrl string
+
+	NatsEmbedded bool
+
+	NatsEmbeddedConfigPath string
 
 	ClientStatusBucket string
 
@@ -61,6 +67,20 @@ func NatsUrl(url *url.URL) Option {
 	}
 }
 
+func NatsEmbedded(embed bool) Option {
+	return func(opts *Options) error {
+		opts.NatsEmbedded = embed
+		return nil
+	}
+}
+
+func NatsEmbeddedConfigPath(path string) Option {
+	return func(opts *Options) error {
+		opts.NatsEmbeddedConfigPath = path
+		return nil
+	}
+}
+
 func ClientStatusBucket(bucket string) Option {
 	return func(opts *Options) error {
 		opts.ClientStatusBucket = bucket
@@ -77,13 +97,15 @@ func ClientProfileBucket(bucket string) Option {
 
 func GetDefaultOptions() Options {
 	return Options{
-		Address:             DefaultAddress,
-		NetworkId:           DefaultNetworkId,
-		ChainId:             DefaultChainId,
-		NatsUrl:             DefaultNatsUrl,
-		ClientStatusBucket:  DefaultClientStatusBucket,
-		ClientProfileBucket: DefaultClientProfileBucket,
-		MaxDistanceFromHead: DefaultMaxDistanceFromHead,
+		Address:                DefaultAddress,
+		NetworkId:              DefaultNetworkId,
+		ChainId:                DefaultChainId,
+		NatsUrl:                DefaultNatsUrl,
+		NatsEmbedded:           DefaultNatsEmbedded,
+		NatsEmbeddedConfigPath: DefaultNatsEmbeddedConfigPath,
+		ClientStatusBucket:     DefaultClientStatusBucket,
+		ClientProfileBucket:    DefaultClientProfileBucket,
+		MaxDistanceFromHead:    DefaultMaxDistanceFromHead,
 	}
 }
 
@@ -95,14 +117,20 @@ func ListenAndServe(ctx context.Context, options ...Option) error {
 		}
 	}
 
+	if err := startNatsServer(opts); err != nil {
+		return err
+	}
+
 	if err := connectNats(opts); err != nil {
 		return err
 	}
-	defer closeNats()
 
 	if err := startTracking(opts); err != nil {
 		return err
 	}
+
+	defer closeNats()       // stop connection to server first
+	defer closeNatsServer() // stop embedded server (if applicable)
 	defer stopTracking()
 
 	return listenAndServe(ctx, opts)
