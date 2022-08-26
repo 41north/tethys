@@ -1,14 +1,11 @@
 package proxy
 
 import (
-	"strconv"
 	"sync"
 	"time"
 
 	natseth "github.com/41north/tethys/pkg/eth/nats"
 
-	"github.com/41north/tethys/pkg/eth"
-	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -23,9 +20,6 @@ var (
 	natsConn     *nats.Conn
 	jsContext    nats.JetStreamContext
 	stateManager *natseth.StateManager
-
-	rpcClient     natsutil.RpcClient
-	subjectPrefix string
 
 	mutex sync.Mutex
 )
@@ -89,16 +83,6 @@ func connectNats(opts Options) error {
 
 	if err != nil {
 		return errors.Annotate(err, "failed to initialise state stores")
-	}
-
-	networkId := strconv.FormatUint(opts.NetworkId, 10)
-	chainId := strconv.FormatUint(opts.ChainId, 10)
-
-	subjectPrefix = eth.SubjectName("eth", "rpc", networkId, chainId)
-
-	rpcClient, err = natsutil.NewRpcClient(conn)
-	if err != nil {
-		return errors.Annotate(err, "failed to create rpc client")
 	}
 
 	return nil

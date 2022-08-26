@@ -54,17 +54,6 @@ func (cs *ClientStatus) Merge(src *ClientStatus) (*ClientStatus, error) {
 	return merged, nil
 }
 
-func SubjectName(keys ...string) string {
-	var sb strings.Builder
-	for idx, key := range keys {
-		if idx > 0 {
-			sb.WriteString(".")
-		}
-		sb.WriteString(key)
-	}
-	return sb.String()
-}
-
 func SanitizeVersion(version string) string {
 	version = strings.ReplaceAll(version, ".", "_")
 	version = strings.ReplaceAll(version, "-", "_")

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/41north/tethys/pkg/eth"
-
 	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
@@ -74,19 +72,12 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 				continue
 			}
 
-			clientId, ok := balancer.NextClientId()
-			if !ok {
-				h.respCh <- &jsonrpc.Response{
-					Id:    req.Id,
-					Error: &errNoClientsAvailable,
-				}
-				continue
-			}
-
-			clientSubject := eth.SubjectName(subjectPrefix, clientId)
-
 			h.group.Go(func() error {
-				return invokeWithCache(clientSubject, &req, 10*time.Second, h.respCh)
+				resp, err := invokeWithCache(&req, 10*time.Second)
+				if err == nil {
+					h.respCh <- resp
+				}
+				return err
 			})
 		}
 	}

@@ -17,8 +17,9 @@ import (
 )
 
 type CanonicalChain struct {
-	networkId           uint64
-	chainId             uint64
+	NetworkId uint64
+	ChainId   uint64
+
 	maxDistanceFromHead int
 
 	log *log.Entry
@@ -41,6 +42,10 @@ func (cc *CanonicalChain) Head() *Block {
 	} else {
 		return head.(*Block)
 	}
+}
+
+func (cc *CanonicalChain) BlockByHash(hash string) (*Block, bool) {
+	return cc.blocksByHash.Get(hash)
 }
 
 func (cc *CanonicalChain) AddListener(ch chan<- *CanonicalChain) {
@@ -80,8 +85,8 @@ func NewCanonicalChain(
 	maxDistanceFromHead int,
 ) (*CanonicalChain, error) {
 	bc := CanonicalChain{
-		networkId:           networkId,
-		chainId:             chainId,
+		NetworkId:           networkId,
+		ChainId:             chainId,
 		maxDistanceFromHead: maxDistanceFromHead,
 		updates:             updates,
 		log:                 log.WithField("component", "CanonicalChain"),

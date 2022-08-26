@@ -2,13 +2,13 @@ package proxy
 
 import (
 	"github.com/41north/tethys/pkg/eth/tracking"
+	"github.com/41north/tethys/pkg/nats"
 	"github.com/juju/errors"
 )
 
 var (
-	canonicalChain *tracking.CanonicalChain
-
-	balancer tracking.LoadBalancer
+	canonicalChain    *tracking.CanonicalChain
+	latestBlockRouter nats.Router
 )
 
 func startTracking(opts Options) error {
@@ -17,22 +17,14 @@ func startTracking(opts Options) error {
 		return errors.Annotate(err, "failed to create client status watcher")
 	}
 
-	chain, err := tracking.NewCanonicalChain(opts.NetworkId, opts.ChainId, watcher.Updates(), 12)
+	canonicalChain, err = tracking.NewCanonicalChain(opts.NetworkId, opts.ChainId, watcher.Updates(), 12)
 	if err != nil {
 		return errors.Annotate(err, "failed to create canonical chain tracker")
 	}
 
-	lb, err := tracking.NewLatestBalancer(opts.NetworkId, opts.ChainId, 0)
-	if err != nil {
-		return errors.Annotate(err, "failed to create load balancer")
-	}
+	latestBlockRouter = NewLatestBlockRouter(natsConn, canonicalChain, 0)
 
-	chain.AddListener(lb.Channel())
-	chain.Start()
-
-	// store in module context
-	canonicalChain = chain
-	balancer = lb
+	canonicalChain.Start()
 
 	return nil
 }

@@ -60,10 +60,10 @@ func InitCaches(opts Options) error {
 	return nil
 }
 
-func invokeWithCache(subject string, req *jsonrpc.Request, timeout time.Duration, respCh chan<- *jsonrpc.Response) error {
+func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
 	_, doCache := methodsToCache[req.Method]
 	if !doCache {
-		return invoke(subject, req, timeout, respCh)
+		return invoke(req, timeout)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -78,7 +78,7 @@ func invokeWithCache(subject string, req *jsonrpc.Request, timeout time.Duration
 			JsonRpc: req.JsonRpc, Id: req.Id, Method: req.Method, Params: req.Params,
 		}
 		if err := transform(downstreamReq); err != nil {
-			return errors.Annotate(err, "failed to apply request transform")
+			return nil, errors.Annotate(err, "failed to apply request transform")
 		}
 	}
 
@@ -89,25 +89,20 @@ func invokeWithCache(subject string, req *jsonrpc.Request, timeout time.Duration
 		resp := jsonrpc.Response{
 			Id: req.Id,
 		}
-		err := rpcClient.Invoke(subject, downstreamReq, timeout, &resp)
+		err := latestBlockRouter.RequestJsonRpcWithContext(ctx, req, &resp)
 		return resp, err
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	respCh <- &resp
-	return nil
+	return &resp, err
 }
 
-func invoke(subject string, req *jsonrpc.Request, timeout time.Duration, respCh chan<- *jsonrpc.Response) error {
+func invoke(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
 	resp := jsonrpc.Response{
 		Id: req.Id,
 	}
-	err := rpcClient.Invoke(subject, req, timeout, &resp)
-	if err != nil {
-		resp.Error = &jsonrpc.ErrInternal
-	}
-	respCh <- &resp
-	return err
+	err := latestBlockRouter.RequestJsonRpc(req, timeout, &resp)
+	return &resp, err
 }
