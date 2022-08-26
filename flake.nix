@@ -66,7 +66,7 @@
     in {
       # nix build .#<app>
       packages = let
-        vendorSha256 = "sha256-7MpZnG+KtBuGpcWy/01sx+m6h3AB8qCfH88g6z948dU=";
+        vendorSha256 = "sha256-HmAzWzdjVkVGZH0CazIf032MpANpkakDLYcY8UOyM6k=";
       in
         flattenTree rec {
           tethys-proxy = buildGoApp {
