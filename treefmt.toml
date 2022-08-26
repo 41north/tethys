@@ -5,7 +5,7 @@ command = "alejandra"
 includes = ["*.nix"]
 
 [formatter.golang]
-command = "goimports"
+command = "gofumpt"
 options = ["-w"]
 includes = ["*.go"]
 excludes = ["*.pb.go$"]

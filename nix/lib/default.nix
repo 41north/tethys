@@ -1,6 +1,6 @@
-{pkgs}: let
+{pkgs}:
+with (pkgs.lib); let
   inherit (pkgs) buildGo119Module;
-  inherit (pkgs.lib) licenses;
 in {
   # Creates a devshell category with a given pkg
   pkgWithCategory = category: package: {inherit package category;};
