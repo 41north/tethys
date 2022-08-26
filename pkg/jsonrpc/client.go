@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/41north/tethys/pkg/async"
-
 	"github.com/41north/tethys/pkg/util"
 	"github.com/google/uuid"
 	"github.com/juju/errors"
@@ -89,9 +87,9 @@ func newCloseHandler(conn *websocket.Conn, delegate func(code int, message strin
 }
 
 type invocation struct {
-	key  string
-	req  *Request
-	resp chan util.Result[*Response]
+	key    string
+	req    *Request
+	result chan util.Result[*Response]
 }
 
 func newInvocation(key string, req *Request) invocation {
@@ -99,18 +97,18 @@ func newInvocation(key string, req *Request) invocation {
 		key: key,
 		req: req,
 		// size 1 to prevent rendezvous and improve throughput
-		resp: make(chan util.Result[*Response]),
+		result: make(chan util.Result[*Response]),
 	}
 }
 
 func (i invocation) onError(err error) {
-	defer close(i.resp)
-	i.resp <- util.NewResultErr[*Response](err)
+	defer close(i.result)
+	i.result <- util.NewResultErr[*Response](err)
 }
 
 func (i invocation) onResponse(resp *Response) {
-	defer close(i.resp)
-	i.resp <- util.NewResult(resp)
+	defer close(i.result)
+	i.result <- util.NewResult(resp)
 }
 
 func (i invocation) cancel() {
@@ -335,11 +333,11 @@ func (c *Client) onResponse(resp *Response) {
 	inv.onResponse(resp)
 }
 
-func (c *Client) Invoke(ctx context.Context, req *Request) async.Future[Response] {
+func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
 
 	// check if connected
 	if !c.isConnected() {
-		return async.NewFutureFailed[Response](ErrNotConnected)
+		return nil, ErrNotConnected
 	}
 
 	// create a new request with a unique id
@@ -351,13 +349,13 @@ func (c *Client) Invoke(ctx context.Context, req *Request) async.Future[Response
 
 	id, err := uuid.NewUUID()
 	if err != nil {
-		return async.NewFutureFailed[Response](errors.Annotate(err, "failed to generate a uuid"))
+		return nil, errors.Annotate(err, "failed to generate a uuid")
 	}
 
 	key := id.String()
 
 	if err = uniqueRequest.WithStringId(key); err != nil {
-		return async.NewFutureFailed[Response](errors.Annotate(err, "failed to set request id"))
+		return nil, errors.Annotate(err, "failed to set request id")
 	}
 
 	// create a new invocation and store for later dispatch
@@ -384,8 +382,8 @@ func (c *Client) Invoke(ctx context.Context, req *Request) async.Future[Response
 	// schedule the invocation
 	c.invocations <- &inv
 
-	// convert invocation to a future
-	return async.NewFuture(inv.resp)
+	// wait for response
+	return (<-inv.result).Value()
 }
 
 // Close stops request processing and releases resources.

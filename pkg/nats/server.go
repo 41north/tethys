@@ -175,7 +175,7 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		resp, err := srv.client.InvokeRequest(ctx, &request).Await(ctx)
+		resp, err := srv.client.InvokeRequest(ctx, &request)
 
 		if err != nil {
 			respondWithError(msg, &request, &jsonrpc.Error{
