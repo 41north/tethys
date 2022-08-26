@@ -47,7 +47,6 @@ func (e kve[T]) Delta() uint64              { return e.delegate.Delta() }
 func (e kve[T]) Operation() nats.KeyValueOp { return e.delegate.Operation() }
 
 func (e kve[T]) Value() (T, error) {
-
 	// first we check if the values have already been unmarshalled
 	e.mutex.RLock()
 	if e.unmarshalled {

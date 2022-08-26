@@ -1,6 +1,6 @@
-self: super: let
-  callPackage = self.pkgs.callPackage;
-  lib = self.lib;
+self: super:
+with self.lib; let
+  inherit (self.pkgs) callPackage;
 in {
   # https://github.com/mvdan/gofumpt
   # Notes:
@@ -9,30 +9,19 @@ in {
   #   - This thread contains list of tooling supporting Go Generics: https://github.com/golang/go/issues/50558/
   #   - It seems, that support in gofumpt is not completely done yet.
   gofumpt = super.gofumpt.overrideAttrs (attrs: rec {
-    version = "master-900c61";
+    version = "master-70d743";
     src = super.fetchFromGitHub {
       owner = "mvdan";
       repo = attrs.pname;
-      rev = "900c61a4cb83bedde751dd2aedf2fc1c73de5e40";
+      rev = "70d7433507d8d92bfa78a923e1f48de9b9e17203";
       sha256 = "sha256-TZMRsSfyL7G7SuLeUpfnAufzYp6XTj4MFzURkk9t9pM=";
     };
-    vendorSha256 = lib.fakeSha256;
+    doCheck = false;
+    vendorSha256 = fakeSha256;
     ldflags = [
       "-s"
       "-w"
       "-X mvdan.cc/gofumpt/internal/version.version=${version}"
     ];
   });
-
-  # https://github.com/ava-labs/avalanchego/
-  avalanchego = callPackage ./local/pkgs/avalanchego {};
-
-  # https://github.com/ava-labs/avalanche-cli
-  avalanche-cli = callPackage ./local/pkgs/avalanche-cli {};
-
-  # https://github.com/ava-labs/avalanche-network-runner
-  avalanche-network-runner = callPackage ./local/pkgs/avalanche-network-runner {};
-
-  # https://github.com/ava-labs/subnet-cli
-  avalanche-subnet-cli = callPackage ./local/pkgs/avalanche-subnet-cli {};
 }

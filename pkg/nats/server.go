@@ -71,7 +71,6 @@ func NewRpcServer(
 	client *web3.Client,
 	options ...RpcServerOption,
 ) (*RpcServer, error) {
-
 	opts := GetDefaultRpcServerOptions()
 	opts.ClientId = clientId
 
@@ -101,7 +100,6 @@ func (srv *RpcServer) ListenAndServe(
 	ctx context.Context,
 	subFn func(conn *nats.Conn, msgs chan *nats.Msg) ([]*nats.Subscription, error),
 ) error {
-
 	opts := srv.Options
 	msgs := make(chan *nats.Msg, opts.MaxInFlightRequests)
 
@@ -118,7 +116,6 @@ func (srv *RpcServer) ListenAndServe(
 	g.SetLimit(opts.MaxInFlightRequests)
 
 	g.Go(func() error {
-
 		for {
 			select {
 
@@ -176,7 +173,6 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 		defer cancel()
 
 		resp, err := srv.client.InvokeRequest(ctx, &request)
-
 		if err != nil {
 			respondWithError(msg, &request, &jsonrpc.Error{
 				Code:    -32603,
@@ -189,7 +185,6 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 
 		respond(msg, resp)
 	}()
-
 }
 
 func respond(msg *nats.Msg, resp *jsonrpc.Response) {

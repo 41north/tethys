@@ -24,7 +24,6 @@ var (
 )
 
 func listenAndServe(ctx context.Context, options Options) error {
-
 	srv := &http.Server{Addr: options.Address}
 	http.HandleFunc("/", requestHandler)
 

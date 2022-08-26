@@ -12,7 +12,6 @@ var (
 )
 
 func startTracking(opts Options) error {
-
 	watcher, err := stateManager.Status.WatchAll()
 	if err != nil {
 		return errors.Annotate(err, "failed to create client status watcher")

@@ -11,7 +11,6 @@ var (
 )
 
 func connectNats(opts Options) error {
-
 	var err error
 
 	natsConn, err = nats.Connect(opts.NatsUrl)

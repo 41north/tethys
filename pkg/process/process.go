@@ -10,7 +10,6 @@ import (
 )
 
 func Run(app func(ctx context.Context) error) error {
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {

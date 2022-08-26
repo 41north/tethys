@@ -1,5 +1,5 @@
 {
-  description = "web3 a smart load balancer for the blockchain";
+  description = "Tethys, a smart load balancer for the blockchain";
 
   nixConfig = {
     substituters = [
@@ -20,7 +20,6 @@
     };
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    go_1_19.url = "github:qowoz/nixpkgs/go119";
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.flake-utils.follows = "flake-utils";
@@ -50,17 +49,14 @@
         overlays = [
           devshell.overlay
           (import ./nix/overlays)
+          (import ./nix/pkgs)
         ];
       };
-      pkgs_go119 = import inputs.go_1_19 {
-        inherit system;
-      };
 
-      inherit (pkgs) dockerTools;
-      inherit (pkgs_go119) buildGoModule;
+      inherit (pkgs) dockerTools buildGoModule;
       inherit (pkgs.stdenv) isLinux;
       inherit (pkgs.lib) lists fakeSha256 licenses platforms;
-      inherit (import ./nix/lib {pkgs = pkgs_go119;}) pkgWithCategory buildGoApp;
+      inherit (import ./nix/lib {inherit pkgs;}) pkgWithCategory buildGoApp;
 
       # devshell command categories
       dev = pkgWithCategory "dev";
@@ -103,35 +99,21 @@
 
       # nix develop
       devShell = pkgs.devshell.mkShell {
-        env =
-          [
-            # disable CGO for now
-            {
-              name = "CGO_ENABLED";
-              value = "0";
-            }
-          ]
-          ++ lists.optionals isLinux [
-            # override default behavior for avalanche-cli
-            {
-              name = "AVALANCHEGO_EXEC_PATH";
-              value = "${pkgs.avalanchego}/bin/avalanchego";
-            }
-            # override behavior for avalanche-cli
-            {
-              name = "AVALANCHE_SUBNET_EVM_PATH";
-              value = "${pkgs.avalanche-subnet-cli}/bin/subnet-cli";
-            }
-          ];
+        env = [
+          # disable CGO for now
+          {
+            name = "CGO_ENABLED";
+            value = "0";
+          }
+        ];
         packages = with pkgs;
           [
             alejandra # https://github.com/kamadorueda/alejandra
             delve # https://github.com/go-delve/delve
-            #            go_1_18 # https://go.dev/
-            pkgs_go119.go_1_19
-            gotools # https://go.googlesource.com/tools
+            go_1_19 # https://go.dev/
             go-ethereum # https://geth.ethereum.org/
             gofumpt # https://github.com/mvdan/gofumpt
+            gotools # https://go.googlesource.com/tools
             jq # https://stedolan.github.io/jq/
             just # https://github.com/casey/just
             nats-server # https://github.com/nats-io/nats-server
@@ -143,12 +125,6 @@
             treefmt # https://github.com/numtide/treefmt
           ]
           ++ lists.optionals isLinux [
-            # for now, these local packages doesn't work on darwin
-            avalanche-cli # https://github.com/ava-labs/avalanche-cli
-            avalanche-network-runner # https://github.com/ava-labs/avalanche-network-runner
-            avalanche-subnet-cli # https://github.com/ava-labs/subnet-cli
-            avalanchego # https://github.com/ava-labs/avalanchego
-
             # for Darwin docker should be installed separately
             docker
             docker-compose
@@ -171,12 +147,6 @@
             (util just)
           ]
           ++ lists.optionals isLinux [
-            # for now, we only add these utilities if on linux
-            (dev avalanche-cli)
-            (dev avalanche-network-runner)
-            (dev avalanche-subnet-cli)
-            (dev avalanchego)
-
             (dev docker)
             (dev docker-compose)
           ];

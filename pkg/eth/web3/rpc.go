@@ -19,13 +19,11 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-
 	client := Client{
 		group: new(errgroup.Group),
 	}
 
 	rpc, err := jsonrpc.NewClient(url)
-
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +57,8 @@ func (c *Client) Close() {
 func (c *Client) Invoke(
 	ctx context.Context,
 	method string,
-	params any) (*jsonrpc.Response, error) {
-
+	params any,
+) (*jsonrpc.Response, error) {
 	req := &jsonrpc.Request{
 		Method: method,
 	}

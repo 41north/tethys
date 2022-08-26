@@ -106,7 +106,6 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 }
 
 func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error) {
-
 	bucket := fmt.Sprintf("%s_%d_%d", opts.StatusBucket, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {
@@ -120,7 +119,6 @@ func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error
 }
 
 func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, error) {
-
 	bucket := fmt.Sprintf("%s_%d_%d", opts.ProfileBucket, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {

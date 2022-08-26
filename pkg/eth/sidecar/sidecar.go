@@ -68,7 +68,6 @@ func GetDefaultOptions() Options {
 }
 
 func Run(ctx context.Context, options ...Option) error {
-
 	opts := GetDefaultOptions()
 	for _, opt := range options {
 		if err := opt(&opts); err != nil {
@@ -81,7 +80,6 @@ func Run(ctx context.Context, options ...Option) error {
 	}
 
 	for {
-
 		select {
 		case <-ctx.Done():
 			closeNats()
@@ -96,6 +94,5 @@ func Run(ctx context.Context, options ...Option) error {
 			}
 
 		}
-
 	}
 }

@@ -139,7 +139,6 @@ func NewClient(
 	url string,
 	options ...ClientOption,
 ) (*Client, error) {
-
 	// process options
 	opts := GetDefaultClientOptions()
 	for _, opt := range options {
@@ -178,7 +177,6 @@ func (c *Client) Connect(
 	requests chan<- *Request,
 	closeHandler func(code int, message string),
 ) error {
-
 	if !c.transitionState(stateDisconnected, stateConnecting) {
 		return util.ErrNotClosed
 	}
@@ -284,7 +282,7 @@ func (c *Client) read(ctx context.Context) error {
 				}
 			}
 
-			var rawStr = string(raw)
+			rawStr := string(raw)
 
 			// TODO tighten up these assertions
 			if strings.Contains(rawStr, "method") {
@@ -334,7 +332,6 @@ func (c *Client) onResponse(resp *Response) {
 }
 
 func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
-
 	// check if connected
 	if !c.isConnected() {
 		return nil, ErrNotConnected
