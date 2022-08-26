@@ -79,7 +79,6 @@ func NewCanonicalChain(
 	updates <-chan natsutil.KeyValueEntry[eth.ClientStatus],
 	maxDistanceFromHead int,
 ) (*CanonicalChain, error) {
-
 	bc := CanonicalChain{
 		networkId:           networkId,
 		chainId:             chainId,
@@ -92,7 +91,6 @@ func NewCanonicalChain(
 }
 
 func (cc CanonicalChain) Start() {
-
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -109,7 +107,6 @@ func (cc *CanonicalChain) process(ctx context.Context) {
 	defer cc.wg.Done()
 
 	for {
-
 		select {
 
 		case <-ctx.Done():

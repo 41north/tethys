@@ -27,7 +27,6 @@ var (
 )
 
 func connectNats(opts Options) error {
-
 	mutex.Lock()
 	defer mutex.Unlock()
 

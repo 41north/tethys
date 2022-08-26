@@ -52,7 +52,6 @@ func newClientSession(opts Options) clientSession {
 }
 
 func (cs *clientSession) connect(ctx context.Context) error {
-
 	client, err := web3.NewClient(cs.url)
 	if err != nil {
 		return errors.Annotate(err, "failed to create eth client")
@@ -74,7 +73,6 @@ func (cs *clientSession) connect(ctx context.Context) error {
 	isConnected := false
 
 	for !isConnected {
-
 		select {
 		case <-ctx.Done():
 			return nil
@@ -91,7 +89,6 @@ func (cs *clientSession) connect(ctx context.Context) error {
 			}
 			isConnected = err == nil
 		}
-
 	}
 
 	cs.client = client
@@ -166,7 +163,6 @@ func (cs *clientSession) connect(ctx context.Context) error {
 }
 
 func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -217,7 +213,6 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 }
 
 func (cs *clientSession) buildInitialClientStatus(profile *eth.ClientProfile) (*eth.ClientStatus, error) {
-
 	// get sync progress
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -256,7 +251,6 @@ func (cs *clientSession) buildInitialClientStatus(profile *eth.ClientProfile) (*
 }
 
 func (cs *clientSession) listenForRpcRequests(ctx context.Context) error {
-
 	clientId := cs.clientProfile.Id()
 	networkId := strconv.FormatUint(cs.clientProfile.NetworkId, 10)
 	chainId := strconv.FormatUint(cs.clientProfile.ChainId, 10)
@@ -267,7 +261,6 @@ func (cs *clientSession) listenForRpcRequests(ctx context.Context) error {
 	}
 
 	subFn := func(conn *nats.Conn, msgs chan *nats.Msg) ([]*nats.Subscription, error) {
-
 		// uniquely identifies this client
 		subject := eth.SubjectName("eth", "rpc", networkId, chainId, clientId)
 
@@ -283,7 +276,6 @@ func (cs *clientSession) listenForRpcRequests(ctx context.Context) error {
 }
 
 func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
-
 	// subscribe for new heads
 	requestCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -299,7 +291,6 @@ func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
 	newHeads := cs.client.HandleSubscription(subId)
 
 	cs.group.Go(func() error {
-
 		running := true
 		for running {
 			select {
@@ -327,10 +318,8 @@ func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
 }
 
 func (cs *clientSession) onNewHead(notification *web3.SubscriptionNotification) {
-
 	var newHead web3.NewHead
 	err := notification.UnmarshalResult(&newHead)
-
 	if err != nil {
 		cs.log.WithFields(log.Fields{
 			"error": err.Error(),
@@ -387,7 +376,6 @@ func (cs *clientSession) onNewHead(notification *web3.SubscriptionNotification) 
 }
 
 func (cs *clientSession) buildNewHeadsPublisher() error {
-
 	cp := cs.clientProfile
 	cv := cp.ClientVersion
 	version := eth.SanitizeVersion(cv.Version)
@@ -400,7 +388,6 @@ func (cs *clientSession) buildNewHeadsPublisher() error {
 	publisher, err := natsutil.NewPublisher[web3.NewHead](
 		natsJs, subject,
 		func(js nats.JetStreamContext) error {
-
 			streamConfig := &nats.StreamConfig{
 				Name:              fmt.Sprintf("eth_%s_%s_newHeads", networkId, chainId),
 				Description:       fmt.Sprintf("ETH newHeads for networkId %s and chainId %s", networkId, chainId),

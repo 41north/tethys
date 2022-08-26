@@ -37,7 +37,6 @@ func NewLatestBalancer(
 	chainId uint64,
 	maxDistanceFromHead int,
 ) (LoadBalancer, error) {
-
 	result := latest{
 		networkId:           networkId,
 		chainId:             chainId,
@@ -67,7 +66,6 @@ func (l *latest) ChainId() uint64 {
 }
 
 func (l *latest) run(ctx context.Context) {
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -103,7 +101,6 @@ func (l *latest) run(ctx context.Context) {
 }
 
 func (l *latest) NextClientId() (string, bool) {
-
 	clientIdRef := l.clientIds.Load()
 	if clientIdRef == nil {
 		return "", false
@@ -121,5 +118,4 @@ func (l *latest) NextClientId() (string, bool) {
 }
 
 func (l *latest) Close() {
-
 }

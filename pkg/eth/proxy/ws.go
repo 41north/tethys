@@ -36,9 +36,7 @@ func (h *wsHandler) handle(ctx context.Context) {
 
 func (h *wsHandler) socketWrite() error {
 	for resp := range h.respCh {
-
 		if err := h.conn.WriteJSON(resp); err != nil {
-
 			switch err.(type) {
 
 			case *websocket.CloseError:
@@ -54,7 +52,6 @@ func (h *wsHandler) socketWrite() error {
 
 func (h *wsHandler) socketRead(ctx context.Context) error {
 	for {
-
 		select {
 
 		case <-ctx.Done():
@@ -64,7 +61,6 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 		default:
 
 			_, bytes, err := h.conn.ReadMessage()
-
 			if err != nil {
 				close(h.respCh)
 				return err
