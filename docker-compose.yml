@@ -9,16 +9,15 @@ networks:
         - subnet: 172.16.254.0/28
 
 services:
-
   nats:
     image: nats:2.8.3-alpine
     container_name: nats
     volumes:
       - ./docker/nats/:/etc/nats:ro
     ports:
-      - '4222:4222' # client connections
-      - '6222:6222' # routing port for clustering
-      - '8222:8222' # http management port for information reporting
+      - "4222:4222" # client connections
+      - "6222:6222" # routing port for clustering
+      - "8222:8222" # http management port for information reporting
     networks:
       - tethys
 
@@ -73,8 +72,8 @@ services:
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
     ports:
-      - '8545:8545'
-      - '8546:8546'
+      - "8545:8545"
+      - "8546:8546"
     networks:
       - tethys
 
@@ -177,7 +176,7 @@ services:
     networks:
       - tethys
     ports:
-      - '8080:8080'
+      - "8080:8080"
     restart: on-failure
     command:
       - eth
