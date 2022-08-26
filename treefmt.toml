@@ -4,7 +4,7 @@
 command = "alejandra"
 includes = ["*.nix"]
 
-[formatter.golang]
+[formatter.go]
 command = "gofumpt"
 options = ["-w"]
 includes = ["*.go"]
@@ -13,15 +13,4 @@ excludes = ["*.pb.go$"]
 [formatter.prettier]
 command = "prettier"
 options = ["--write"]
-includes = [
-  "*.css",
-  "*.html",
-  "*.js",
-  "*.json",
-  "*.jsx",
-  "*.md",
-  "*.mdx",
-  "*.scss",
-  "*.ts",
-  "*.tsx",
-]
+includes = ["*.html", "*.json", "*.md", "*.yml", "*.yaml"]

@@ -25,7 +25,7 @@ code:
 
 # Builds a concrete binary using go
 go-build PROGRAM:
-  go build cmd/{{PROGRAM}}/{{PROGRAM}}.go
+  go build -o ./out/{{PROGRAM}} ./cmd/{{PROGRAM}}
 
 # Builds all binaries using go
 go-build-all: (go-build "proxy") (go-build "sidecar")
@@ -53,4 +53,5 @@ nix-check:
 
 # Cleans all outputs
 clean:
-  rm -rf result*
+  rm -rf result* out/
+alias c := clean

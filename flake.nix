@@ -63,7 +63,7 @@
       linter = pkgWithCategory "linters";
       formatter = pkgWithCategory "formatters";
       util = pkgWithCategory "utils";
-    in rec {
+    in {
       # nix build .#<app>
       packages = let
         vendorSha256 = "sha256-7MpZnG+KtBuGpcWy/01sx+m6h3AB8qCfH88g6z948dU=";
@@ -99,6 +99,9 @@
 
       # nix develop
       devShell = pkgs.devshell.mkShell {
+        # TODO: Not recognized properly, research why
+        # inherit (self.checks.${system}.pre-commit-check) shellHook;
+
         env = [
           # disable CGO for now
           {
@@ -142,6 +145,7 @@
             (formatter nodePackages.prettier)
 
             (linter golangci-lint)
+            (linter hadolint)
 
             (util jq)
             (util just)
@@ -156,11 +160,11 @@
       apps = {
         tethys-proxy = mkApp {
           name = "tethys-proxy";
-          drv = packages.tethys-proxy;
+          drv = self.packages.tethys-proxy;
         };
         tethys-sidecar = mkApp {
           name = "tethys-sidecar";
-          drv = packages.tethys-sidecar;
+          drv = self.packages.tethys-sidecar;
         };
       };
 
@@ -169,8 +173,11 @@
       checks = {
         pre-commit-check = pre-commit-hooks.lib.${system}.run {
           src = ./.;
+          default_stages = ["manual" "push"];
           hooks = {
             alejandra.enable = true;
+            prettier.enable = true;
+            hadolint.enable = true;
           };
         };
       };
