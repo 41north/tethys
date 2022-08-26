@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/41north/tethys/pkg/async"
 	"github.com/41north/tethys/pkg/util"
 	"github.com/nats-io/nats.go"
 	"github.com/viney-shih/go-cache"
@@ -192,7 +191,7 @@ func (c kvCacheAdapter) sanitizeKey(key string) string {
 }
 
 func (c kvCacheAdapter) MGet(ctx context.Context, keys []string) ([]cache.Value, error) {
-	resultsCh := make(chan util.Result[cache.Value])
+	resultsCh := make(chan util.Result[cache.Value], len(keys))
 
 	go func() {
 		for _, key := range keys {
@@ -215,23 +214,18 @@ func (c kvCacheAdapter) MGet(ctx context.Context, keys []string) ([]cache.Value,
 		close(resultsCh)
 	}()
 
-	results, err := async.NewFuture[cache.Value](resultsCh).AwaitAll(ctx)
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to get all keys")
-	}
-
 	var values []cache.Value
-	for _, result := range results {
-		v, _ := result.Value()
-		//if err != nil {
-		//	return nil, errors.Annotate(err, "failed to get all keys")
-		//}
-
-		if v == nil {
-			v = &cache.Value{Valid: false}
+	for result := range resultsCh {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			v, _ := result.Value()
+			if v == nil {
+				v = &cache.Value{Valid: false}
+			}
+			values = append(values, *v)
 		}
-
-		values = append(values, *v)
 	}
 
 	return values, nil
