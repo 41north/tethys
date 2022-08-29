@@ -37,12 +37,10 @@ func startNatsServer(opts Options) error {
 		return errors.Annotate(err, "failed to parse NATS config options from path")
 	}
 
-	server, err := server.NewServer(nsOpts)
+	ns, err = server.NewServer(nsOpts)
 	if err != nil {
 		return errors.Annotate(err, "failed to create NATS server in embedded mode")
 	}
-
-	ns = server
 
 	// start server directly in a goroutine
 	go ns.Start()

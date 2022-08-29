@@ -8,7 +8,7 @@ import (
 
 type RequestTransform = func(req Request) (Request, error)
 
-type ResponseTransform = func(resp *Response) (Response, error)
+type ResponseTransform = func(resp *Response) error
 
 func NewRequestPipeline(transforms ...RequestTransform) RequestTransform {
 	return func(req Request) (result Request, err error) {

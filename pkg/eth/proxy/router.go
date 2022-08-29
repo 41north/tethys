@@ -2,6 +2,10 @@ package proxy
 
 import (
 	"context"
+	"fmt"
+	proxymethods "github.com/41north/tethys/pkg/eth/proxy/methods"
+	"github.com/41north/tethys/pkg/proxy"
+	"github.com/juju/errors"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -13,6 +17,95 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
+
+var (
+	canonicalChain    *tracking.CanonicalChain
+	latestBlockRouter natsutil.Router
+	cachingRouter     natsutil.Router
+
+	proxyMethods map[string]proxy.Method
+)
+
+func InitRouter(opts Options) error {
+
+	var err error
+
+	watcher, err := stateManager.Status.WatchAll()
+	if err != nil {
+		return errors.Annotate(err, "failed to create client status watcher")
+	}
+
+	canonicalChain, err = tracking.NewCanonicalChain(opts.NetworkId, opts.ChainId, watcher.Updates(), 12)
+	if err != nil {
+		return errors.Annotate(err, "failed to create canonical chain tracker")
+	}
+
+	latestBlockRouter = NewLatestBlockRouter(natsConn, canonicalChain, 0)
+
+	canonicalChain.Start()
+
+	// init the response cache
+	respCachePrefix := fmt.Sprintf("eth_resp_cache_%d_%d", opts.NetworkId, opts.ChainId)
+
+	respCache := natsutil.NewCache[jsonrpc.Response](
+		respCachePrefix,
+		1024*10,
+		1*time.Hour,
+		jsContext,
+	)
+
+	// create a caching router backed by the latest block router
+	cachingRouter = natsutil.NewCachingRouter(respCache, respCachePrefix, latestBlockRouter)
+
+	// construct a map of supported methods
+	proxyMethods, err = proxymethods.Build(canonicalChain, cachingRouter)
+
+	return err
+}
+
+func closeRouter() {
+	canonicalChain.Close()
+}
+
+func invoke(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response) {
+
+	// set the resp id to match the request
+	resp.Id = req.Id
+	resp.JsonRpc = "2.0"
+
+	// check if the method is supported
+	method, ok := proxyMethods[req.Method]
+	if !ok {
+		// todo make a const error for this
+		errorResponse(errors.New("method not supported"), resp)
+		return
+	}
+
+	var err error
+	req, err = method.BeforeRequest(req)
+	if err != nil {
+		errorResponse(errors.Annotate(err, "failed to apply request transform"), resp)
+		return
+	}
+
+	if err = method.Router().RequestWithContext(ctx, req, resp, method.RouteOpts()...); err != nil {
+		errorResponse(err, resp)
+		return
+	}
+
+	if err = method.AfterResponse(resp); err != nil {
+		errorResponse(err, resp)
+		return
+	}
+}
+
+func errorResponse(err error, resp *jsonrpc.Response) {
+	// todo sanitize errors and distinguish between error types
+	resp.Error = &jsonrpc.Error{
+		Code:    -326000,
+		Message: err.Error(),
+	}
+}
 
 type LatestBlockRouter struct {
 	conn *nats.EncodedConn
@@ -28,7 +121,11 @@ type LatestBlockRouter struct {
 	log *log.Entry
 }
 
-func NewLatestBlockRouter(conn *nats.EncodedConn, chain *tracking.CanonicalChain, maxDistanceFromHead int) natsutil.Router {
+func NewLatestBlockRouter(
+	conn *nats.EncodedConn,
+	chain *tracking.CanonicalChain,
+	maxDistanceFromHead int,
+) natsutil.Router {
 	subjectPrefix := natsutil.SubjectName(
 		"eth", "rpc",
 		strconv.FormatUint(chain.NetworkId, 10),
@@ -122,13 +219,13 @@ func (r *LatestBlockRouter) nextSubject() (string, error) {
 	return natsutil.SubjectName(r.subjectPrefix, clientId), nil
 }
 
-func (r *LatestBlockRouter) Request(req jsonrpc.Request, resp *jsonrpc.Response, timeout time.Duration) error {
+func (r *LatestBlockRouter) Request(req jsonrpc.Request, resp *jsonrpc.Response, timeout time.Duration, options ...natsutil.RouteOpt) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return r.RequestWithContext(ctx, req, resp)
+	return r.RequestWithContext(ctx, req, resp, options...)
 }
 
-func (r *LatestBlockRouter) RequestWithContext(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response) error {
+func (r *LatestBlockRouter) RequestWithContext(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response, _ ...natsutil.RouteOpt) error {
 	subject, err := r.nextSubject()
 	if err != nil {
 		return err

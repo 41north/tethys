@@ -122,24 +122,19 @@ func ListenAndServe(ctx context.Context, options ...Option) error {
 	}
 
 	if err := startNatsServer(opts); err != nil {
-		return err
+		return errors.Annotate(err, "failed to start NATS server")
 	}
+	defer closeNatsServer() // stop embedded server (if applicable)
 
 	if err := connectNats(opts); err != nil {
-		return err
+		return errors.Annotate(err, "failed to initialise NATS")
 	}
+	defer closeNats() // stop connection to server first
 
-	if err := InitCaches(opts); err != nil {
-		return errors.Annotate(err, "failed to initialise caches")
+	if err := InitRouter(opts); err != nil {
+		return errors.Annotate(err, "failed to initialise router")
 	}
-
-	if err := startTracking(opts); err != nil {
-		return err
-	}
-
-	defer closeNats()       // stop connection to server first
-	defer closeNatsServer() // stop embedded server (if applicable)
-	defer stopTracking()
+	defer closeRouter()
 
 	return listenAndServe(ctx, opts)
 }

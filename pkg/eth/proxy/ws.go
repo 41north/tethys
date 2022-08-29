@@ -12,6 +12,7 @@ import (
 )
 
 type wsHandler struct {
+	log    *log.Entry
 	conn   *websocket.Conn
 	group  *errgroup.Group
 	respCh chan *jsonrpc.Response
@@ -22,6 +23,10 @@ func newWsHandler(conn *websocket.Conn, group *errgroup.Group) wsHandler {
 		conn:   conn,
 		group:  group,
 		respCh: make(chan *jsonrpc.Response, 256),
+		log: log.WithFields(log.Fields{
+			"component": "wsHandler",
+			"address":   conn.UnderlyingConn().RemoteAddr().String(),
+		}),
 	}
 }
 
@@ -72,13 +77,16 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 				continue
 			}
 
-			h.group.Go(func() error {
-				resp, err := invokeWithCache(req, 10*time.Second)
-				if err == nil {
-					h.respCh <- resp
-				}
-				return err
-			})
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+
+				resp := &jsonrpc.Response{}
+				defer func() { h.respCh <- resp }()
+
+				invoke(ctx, req, resp)
+				h.respCh <- resp
+			}()
 		}
 	}
 }
