@@ -17,7 +17,7 @@ const (
 
 var (
 	ns           *server.Server
-	natsConn     *nats.Conn
+	natsConn     *nats.EncodedConn
 	jsContext    nats.JetStreamContext
 	stateManager *natseth.StateManager
 
@@ -68,7 +68,10 @@ func connectNats(opts Options) error {
 		return errors.Annotate(err, "failed to connect to NATS")
 	}
 
-	natsConn = conn
+	natsConn, err = nats.NewEncodedConn(conn, nats.JSON_ENCODER)
+	if err != nil {
+		return errors.Annotate(err, "failed to create a json encoded NATS connection")
+	}
 
 	jsContext, err = conn.JetStream()
 	if err != nil {

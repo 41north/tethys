@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"encoding/json"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -10,14 +9,13 @@ import (
 	"github.com/41north/tethys/pkg/eth/tracking"
 	"github.com/41north/tethys/pkg/jsonrpc"
 	natsutil "github.com/41north/tethys/pkg/nats"
-	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
 
 type LatestBlockRouter struct {
-	conn *nats.Conn
+	conn *nats.EncodedConn
 
 	chain               *tracking.CanonicalChain
 	maxDistanceFromHead int
@@ -30,7 +28,7 @@ type LatestBlockRouter struct {
 	log *log.Entry
 }
 
-func NewLatestBlockRouter(conn *nats.Conn, chain *tracking.CanonicalChain, maxDistanceFromHead int) natsutil.Router {
+func NewLatestBlockRouter(conn *nats.EncodedConn, chain *tracking.CanonicalChain, maxDistanceFromHead int) natsutil.Router {
 	subjectPrefix := natsutil.SubjectName(
 		"eth", "rpc",
 		strconv.FormatUint(chain.NetworkId, 10),
@@ -124,50 +122,16 @@ func (r *LatestBlockRouter) nextSubject() (string, error) {
 	return natsutil.SubjectName(r.subjectPrefix, clientId), nil
 }
 
-func (r *LatestBlockRouter) Request(data []byte, timeout time.Duration) (*nats.Msg, error) {
+func (r *LatestBlockRouter) Request(req jsonrpc.Request, resp *jsonrpc.Response, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return r.RequestWithContext(ctx, data)
+	return r.RequestWithContext(ctx, req, resp)
 }
 
-func (r *LatestBlockRouter) RequestMsg(msg *nats.Msg, timeout time.Duration) (*nats.Msg, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return r.RequestMsgWithContext(ctx, msg)
-}
-
-func (r *LatestBlockRouter) RequestWithContext(ctx context.Context, data []byte) (*nats.Msg, error) {
+func (r *LatestBlockRouter) RequestWithContext(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response) error {
 	subject, err := r.nextSubject()
-	if err != nil {
-		return nil, err
-	}
-	return r.conn.RequestWithContext(ctx, subject, data)
-}
-
-func (r *LatestBlockRouter) RequestMsgWithContext(ctx context.Context, msg *nats.Msg) (*nats.Msg, error) {
-	subject, err := r.nextSubject()
-	if err != nil {
-		return nil, err
-	}
-	// override the msg subject
-	msg.Subject = subject
-	return r.conn.RequestMsgWithContext(ctx, msg)
-}
-
-func (r *LatestBlockRouter) RequestJsonRpc(req *jsonrpc.Request, timeout time.Duration, resp *jsonrpc.Response) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return r.RequestJsonRpcWithContext(ctx, req, resp)
-}
-
-func (r *LatestBlockRouter) RequestJsonRpcWithContext(ctx context.Context, req *jsonrpc.Request, resp *jsonrpc.Response) error {
-	bytes, err := json.Marshal(req)
-	if err != nil {
-		return errors.Annotate(err, "failed to marshal request to json")
-	}
-	msg, err := r.RequestWithContext(ctx, bytes)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(msg.Data, resp)
+	return r.conn.RequestWithContext(ctx, subject, req, resp)
 }

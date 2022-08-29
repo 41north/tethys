@@ -6,19 +6,24 @@ import (
 )
 
 var (
-	natsConn *nats.Conn
+	natsConn *nats.EncodedConn
 	natsJs   nats.JetStreamContext
 )
 
 func connectNats(opts Options) error {
 	var err error
 
-	natsConn, err = nats.Connect(opts.NatsUrl)
+	conn, err := nats.Connect(opts.NatsUrl)
 	if err != nil {
 		return errors.Annotate(err, "failed to connect to NATS")
 	}
 
-	natsJs, err = natsConn.JetStream()
+	natsConn, err = nats.NewEncodedConn(conn, nats.JSON_ENCODER)
+	if err != nil {
+		return errors.Annotate(err, "failed to create a JSON encoded NATS connection")
+	}
+
+	natsJs, err = conn.JetStream()
 	if err != nil {
 		return errors.Annotate(err, "failed to initialise JetStream context")
 	}

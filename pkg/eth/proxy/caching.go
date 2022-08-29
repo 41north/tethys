@@ -89,7 +89,7 @@ func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Resp
 		resp := jsonrpc.Response{
 			Id: req.Id,
 		}
-		err := latestBlockRouter.RequestJsonRpcWithContext(ctx, req, &resp)
+		err := latestBlockRouter.RequestWithContext(ctx, *req, &resp)
 		return resp, err
 	})
 	if err != nil {
@@ -103,6 +103,6 @@ func invoke(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, err
 	resp := jsonrpc.Response{
 		Id: req.Id,
 	}
-	err := latestBlockRouter.RequestJsonRpc(req, timeout, &resp)
+	err := latestBlockRouter.Request(*req, &resp, timeout)
 	return &resp, err
 }
