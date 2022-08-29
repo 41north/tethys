@@ -6,16 +6,21 @@ import (
 	"github.com/juju/errors"
 )
 
-type RequestTransform = func(req *Request) error
+type RequestTransform = func(req Request) (Request, error)
+
+type ResponseTransform = func(resp *Response) (Response, error)
 
 func NewRequestPipeline(transforms ...RequestTransform) RequestTransform {
-	return func(req *Request) error {
+	return func(req Request) (result Request, err error) {
+		result = req
 		for _, transform := range transforms {
-			if err := transform(req); err != nil {
-				return err
+			result, err = transform(result)
+			if err != nil {
+				// exit early and return the early
+				break
 			}
 		}
-		return nil
+		return result, err
 	}
 }
 
@@ -35,23 +40,22 @@ func marshalParamsArray(req *Request, params []any) error {
 }
 
 func ReplaceParameterByIndex(position int, valueFn func(current any) (any, error)) RequestTransform {
-	return func(req *Request) error {
-		params, err := unmarshalParamsArray(req)
+	return func(req Request) (Request, error) {
+		params, err := unmarshalParamsArray(&req)
 		if err != nil {
-			return errors.Annotate(err, "failed to unmarshal params array")
+			return req, errors.Annotate(err, "failed to unmarshal params array")
 		}
 		if position >= len(params) {
 			// not enough params, do nothing
-			return nil
+			return req, nil
 		}
-
 		// update params
 		value, err := valueFn(params[position])
 		if err != nil {
-			return errors.Annotate(err, "value fn returned an error")
+			return req, errors.Annotate(err, "value fn returned an error")
 		}
 
 		params[position] = value
-		return marshalParamsArray(req, params)
+		return req, marshalParamsArray(&req, params)
 	}
 }

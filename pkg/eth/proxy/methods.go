@@ -1,5 +1,10 @@
 package proxy
 
+import (
+	"github.com/41north/tethys/pkg/jsonrpc"
+	natsutil "github.com/41north/tethys/pkg/nats"
+)
+
 const (
 	EthGetBalance                          = "eth_getBalance"
 	EthGetStorageAt                        = "eth_getStorageAt"
@@ -18,3 +23,9 @@ const (
 	EthGetUncleByBlockHashAndIndex         = "eth_getUncleByBlockHashAndIndex"
 	EthGetUncleByBlockNumberAndIndex       = "eth_getUncleByBlockNumberAndIndex"
 )
+
+type Method interface {
+	Name() string
+	Router() natsutil.Router
+	BeforeRequest() *jsonrpc.RequestTransform
+}

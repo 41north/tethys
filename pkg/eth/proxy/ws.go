@@ -73,7 +73,7 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 			}
 
 			h.group.Go(func() error {
-				resp, err := invokeWithCache(&req, 10*time.Second)
+				resp, err := invokeWithCache(req, 10*time.Second)
 				if err == nil {
 					h.respCh <- resp
 				}

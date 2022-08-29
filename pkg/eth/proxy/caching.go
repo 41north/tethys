@@ -60,7 +60,7 @@ func InitCaches(opts Options) error {
 	return nil
 }
 
-func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
+func invokeWithCache(req jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
 	_, doCache := methodsToCache[req.Method]
 	if !doCache {
 		return invoke(req, timeout)
@@ -69,15 +69,14 @@ func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Resp
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	var err error
 	downstreamReq := req
 	transform, ok := transformsByMethod[req.Method]
 
 	if ok {
-		// copy the original request and apply the transform
-		downstreamReq = &jsonrpc.Request{
-			JsonRpc: req.JsonRpc, Id: req.Id, Method: req.Method, Params: req.Params,
-		}
-		if err := transform(downstreamReq); err != nil {
+		// transform the original request
+		downstreamReq, err = transform(req)
+		if err != nil {
 			return nil, errors.Annotate(err, "failed to apply request transform")
 		}
 	}
@@ -85,11 +84,11 @@ func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Resp
 	key := fmt.Sprintf("%s_%s", downstreamReq.Method, downstreamReq.Params)
 
 	var resp jsonrpc.Response
-	err := respCache.GetByFunc(ctx, respCachePrefix, key, &resp, func() (interface{}, error) {
+	err = respCache.GetByFunc(ctx, respCachePrefix, key, &resp, func() (interface{}, error) {
 		resp := jsonrpc.Response{
 			Id: req.Id,
 		}
-		err := latestBlockRouter.RequestWithContext(ctx, *req, &resp)
+		err := latestBlockRouter.RequestWithContext(ctx, req, &resp)
 		return resp, err
 	})
 	if err != nil {
@@ -99,10 +98,10 @@ func invokeWithCache(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Resp
 	return &resp, err
 }
 
-func invoke(req *jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
+func invoke(req jsonrpc.Request, timeout time.Duration) (*jsonrpc.Response, error) {
 	resp := jsonrpc.Response{
 		Id: req.Id,
 	}
-	err := latestBlockRouter.Request(*req, &resp, timeout)
+	err := latestBlockRouter.Request(req, &resp, timeout)
 	return &resp, err
 }
