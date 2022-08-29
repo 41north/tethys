@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	ErrNatsEmbeddedEmptyConfig = errors.ConstError("nats embedded config path is empty or undefined")
-	ErrNatsAlreadyConnected    = errors.ConstError("nats has already been connected")
+	ErrNatsAlreadyConnected = errors.ConstError("nats has already been connected")
 )
 
 var (
@@ -31,20 +30,21 @@ var (
 )
 
 func startNatsServer(opts Options) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if !opts.NatsEmbedded {
 		return nil
 	}
 
-	if opts.NatsEmbeddedConfigPath == "" {
-		return ErrNatsEmbeddedEmptyConfig
-	}
+	var nsOpts *server.Options = DefaultNatsEmbeddedServerConfig.Clone()
+	var err error
 
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	nsOpts, err := server.ProcessConfigFile(opts.NatsEmbeddedConfigPath)
-	if err != nil {
-		return errors.Annotate(err, "failed to parse NATS config options from path")
+	if opts.NatsEmbeddedConfigPath != "" {
+		nsOpts, err = server.ProcessConfigFile(opts.NatsEmbeddedConfigPath)
+		if err != nil {
+			return errors.Annotate(err, "failed to parse NATS config options from path")
+		}
 	}
 
 	server, err := server.NewServer(nsOpts)

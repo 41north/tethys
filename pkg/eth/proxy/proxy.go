@@ -3,19 +3,29 @@ package proxy
 import (
 	"context"
 	"net/url"
+
+	"github.com/nats-io/nats-server/v2/server"
 )
 
 const (
-	DefaultAddress                = ":8080"
-	DefaultNetworkId              = uint64(1)
-	DefaultChainId                = uint64(1)
-	DefaultNatsUrl                = "ns://127.0.0.1:4222"
-	DefaultNatsEmbedded           = false
-	DefaultNatsEmbeddedConfigPath = ""
-	DefaultClientStatusBucket     = "eth_client_statuses"
-	DefaultClientProfileBucket    = "eth_client_profiles"
-	DefaultMaxDistanceFromHead    = 3
+	DefaultAddress                      = ":8080"
+	DefaultNetworkId                    = uint64(1)
+	DefaultChainId                      = uint64(1)
+	DefaultNatsUrl                      = "ns://127.0.0.1:4222"
+	DefaultNatsEmbedded                 = false
+	DefaultNatsEmbeddedUseDefaultConfig = true
+	DefaultNatsEmbeddedConfigPath       = ""
+	DefaultClientStatusBucket           = "eth_client_statuses"
+	DefaultClientProfileBucket          = "eth_client_profiles"
+	DefaultMaxDistanceFromHead          = 3
 )
+
+// remaining default settings will be filled automatically by server function
+var DefaultNatsEmbeddedServerConfig = server.Options{
+	Host:      server.DEFAULT_HOST,
+	Port:      server.DEFAULT_PORT,
+	JetStream: true,
+}
 
 type Option func(opts *Options) error
 
@@ -29,6 +39,8 @@ type Options struct {
 	NatsUrl string
 
 	NatsEmbedded bool
+
+	NatsEmbeddedUseDefaultConfig bool
 
 	NatsEmbeddedConfigPath string
 
@@ -74,6 +86,13 @@ func NatsEmbedded(embed bool) Option {
 	}
 }
 
+func NatsEmbeddedUseDefaultConfig(enabled bool) Option {
+	return func(opts *Options) error {
+		opts.NatsEmbeddedUseDefaultConfig = enabled
+		return nil
+	}
+}
+
 func NatsEmbeddedConfigPath(path string) Option {
 	return func(opts *Options) error {
 		opts.NatsEmbeddedConfigPath = path
@@ -97,15 +116,16 @@ func ClientProfileBucket(bucket string) Option {
 
 func GetDefaultOptions() Options {
 	return Options{
-		Address:                DefaultAddress,
-		NetworkId:              DefaultNetworkId,
-		ChainId:                DefaultChainId,
-		NatsUrl:                DefaultNatsUrl,
-		NatsEmbedded:           DefaultNatsEmbedded,
-		NatsEmbeddedConfigPath: DefaultNatsEmbeddedConfigPath,
-		ClientStatusBucket:     DefaultClientStatusBucket,
-		ClientProfileBucket:    DefaultClientProfileBucket,
-		MaxDistanceFromHead:    DefaultMaxDistanceFromHead,
+		Address:                      DefaultAddress,
+		NetworkId:                    DefaultNetworkId,
+		ChainId:                      DefaultChainId,
+		NatsUrl:                      DefaultNatsUrl,
+		NatsEmbedded:                 DefaultNatsEmbedded,
+		NatsEmbeddedUseDefaultConfig: DefaultNatsEmbeddedUseDefaultConfig,
+		NatsEmbeddedConfigPath:       DefaultNatsEmbeddedConfigPath,
+		ClientStatusBucket:           DefaultClientStatusBucket,
+		ClientProfileBucket:          DefaultClientProfileBucket,
+		MaxDistanceFromHead:          DefaultMaxDistanceFromHead,
 	}
 }
 
