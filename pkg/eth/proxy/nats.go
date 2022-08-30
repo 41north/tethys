@@ -37,14 +37,9 @@ func startNatsServer(opts Options) error {
 		return nil
 	}
 
-	var nsOpts *server.Options = DefaultNatsEmbeddedServerConfig.Clone()
-	var err error
-
-	if opts.NatsEmbeddedConfigPath != "" {
-		nsOpts, err = server.ProcessConfigFile(opts.NatsEmbeddedConfigPath)
-		if err != nil {
-			return errors.Annotate(err, "failed to parse NATS config options from path")
-		}
+	nsOpts, err := server.ProcessConfigFile(opts.NatsEmbeddedConfigPath)
+	if err != nil {
+		return errors.Annotate(err, "failed to parse NATS config options from path")
 	}
 
 	server, err := server.NewServer(nsOpts)
