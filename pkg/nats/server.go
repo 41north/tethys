@@ -54,7 +54,7 @@ type RpcServer struct {
 	Options RpcServerOptions
 
 	// conn is the NATS connection used for communicating with the NATS server.
-	conn *nats.Conn
+	conn *nats.EncodedConn
 
 	// client is used for making rpc requests against the web3 client.
 	client *web3.Client
@@ -67,7 +67,7 @@ type RpcServer struct {
 
 func NewRpcServer(
 	clientId string,
-	conn *nats.Conn,
+	conn *nats.EncodedConn,
 	client *web3.Client,
 	options ...RpcServerOption,
 ) (*RpcServer, error) {
@@ -84,7 +84,7 @@ func NewRpcServer(
 
 	l := log.WithFields(log.Fields{
 		"component":   "NatsRpcServer",
-		"url":         conn.ConnectedUrlRedacted(),
+		"url":         conn.Conn.ConnectedUrlRedacted(),
 		"ethClientId": util.ElideString(clientId),
 	})
 
@@ -103,7 +103,7 @@ func (srv *RpcServer) ListenAndServe(
 	opts := srv.Options
 	msgs := make(chan *nats.Msg, opts.MaxInFlightRequests)
 
-	subs, err := subFn(srv.conn, msgs)
+	subs, err := subFn(srv.conn.Conn, msgs)
 	if err != nil {
 		return errors.Annotate(err, "failed to initialise subscriptions")
 	}

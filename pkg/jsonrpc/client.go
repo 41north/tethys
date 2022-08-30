@@ -89,7 +89,7 @@ func newCloseHandler(conn *websocket.Conn, delegate func(code int, message strin
 type invocation struct {
 	key    string
 	req    *Request
-	result chan util.Result[*Response]
+	result chan util.Result[Response]
 }
 
 func newInvocation(key string, req *Request) invocation {
@@ -97,18 +97,18 @@ func newInvocation(key string, req *Request) invocation {
 		key: key,
 		req: req,
 		// size 1 to prevent rendezvous and improve throughput
-		result: make(chan util.Result[*Response]),
+		result: make(chan util.Result[Response]),
 	}
 }
 
 func (i invocation) onError(err error) {
 	defer close(i.result)
-	i.result <- util.NewResultErr[*Response](err)
+	i.result <- util.NewResultErr[Response](err)
 }
 
 func (i invocation) onResponse(resp *Response) {
 	defer close(i.result)
-	i.result <- util.NewResult(resp)
+	i.result <- util.NewResult[Response](resp)
 }
 
 func (i invocation) cancel() {
@@ -380,7 +380,8 @@ func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
 	c.invocations <- &inv
 
 	// wait for response
-	return (<-inv.result).Value()
+	result := <-inv.result
+	return result.Value()
 }
 
 // Close stops request processing and releases resources.

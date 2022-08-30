@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/41north/tethys/pkg/eth"
-
 	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
@@ -14,6 +12,7 @@ import (
 )
 
 type wsHandler struct {
+	log    *log.Entry
 	conn   *websocket.Conn
 	group  *errgroup.Group
 	respCh chan *jsonrpc.Response
@@ -24,6 +23,10 @@ func newWsHandler(conn *websocket.Conn, group *errgroup.Group) wsHandler {
 		conn:   conn,
 		group:  group,
 		respCh: make(chan *jsonrpc.Response, 256),
+		log: log.WithFields(log.Fields{
+			"component": "wsHandler",
+			"address":   conn.UnderlyingConn().RemoteAddr().String(),
+		}),
 	}
 }
 
@@ -74,32 +77,16 @@ func (h *wsHandler) socketRead(ctx context.Context) error {
 				continue
 			}
 
-			clientId, ok := balancer.NextClientId()
-			if !ok {
-				h.respCh <- &jsonrpc.Response{
-					Id:    req.Id,
-					Error: &errNoClientsAvailable,
-				}
-				continue
-			}
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
 
-			clientSubject := eth.SubjectName(subjectPrefix, clientId)
+				resp := &jsonrpc.Response{}
+				defer func() { h.respCh <- resp }()
 
-			h.group.Go(func() error {
-				return invoke(clientSubject, &req, 10*time.Second, h.respCh)
-			})
+				invoke(ctx, req, resp)
+				h.respCh <- resp
+			}()
 		}
 	}
-}
-
-func invoke(subject string, req *jsonrpc.Request, timeout time.Duration, respCh chan<- *jsonrpc.Response) error {
-	resp := jsonrpc.Response{
-		Id: req.Id,
-	}
-	err := rpcClient.Invoke(subject, req, timeout, &resp)
-	if err != nil {
-		resp.Error = &jsonrpc.ErrInternal
-	}
-	respCh <- &resp
-	return err
 }

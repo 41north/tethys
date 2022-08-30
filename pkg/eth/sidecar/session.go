@@ -262,7 +262,7 @@ func (cs *clientSession) listenForRpcRequests(ctx context.Context) error {
 
 	subFn := func(conn *nats.Conn, msgs chan *nats.Msg) ([]*nats.Subscription, error) {
 		// uniquely identifies this client
-		subject := eth.SubjectName("eth", "rpc", networkId, chainId, clientId)
+		subject := natsutil.SubjectName("eth", "rpc", networkId, chainId, clientId)
 
 		sub, err := conn.ChanSubscribe(subject, msgs)
 		if err != nil {
@@ -383,7 +383,7 @@ func (cs *clientSession) buildNewHeadsPublisher() error {
 	networkId := strconv.FormatUint(cp.NetworkId, 10)
 	chainId := strconv.FormatUint(cp.ChainId, 10)
 
-	subject := eth.SubjectName("eth", "newHeads", networkId, chainId, cv.Name, version, cp.Id())
+	subject := natsutil.SubjectName("eth", "newHeads", networkId, chainId, cv.Name, version, cp.Id())
 
 	publisher, err := natsutil.NewPublisher[web3.NewHead](
 		natsJs, subject,
@@ -391,7 +391,7 @@ func (cs *clientSession) buildNewHeadsPublisher() error {
 			streamConfig := &nats.StreamConfig{
 				Name:              fmt.Sprintf("eth_%s_%s_newHeads", networkId, chainId),
 				Description:       fmt.Sprintf("ETH newHeads for networkId %s and chainId %s", networkId, chainId),
-				Subjects:          []string{eth.SubjectName("eth", "newHeads", networkId, chainId, "*", "*", "*")},
+				Subjects:          []string{natsutil.SubjectName("eth", "newHeads", networkId, chainId, "*", "*", "*")},
 				MaxMsgsPerSubject: 128,
 			}
 

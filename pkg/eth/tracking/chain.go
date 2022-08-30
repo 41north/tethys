@@ -17,8 +17,9 @@ import (
 )
 
 type CanonicalChain struct {
-	networkId           uint64
-	chainId             uint64
+	NetworkId uint64
+	ChainId   uint64
+
 	maxDistanceFromHead int
 
 	log *log.Entry
@@ -34,7 +35,7 @@ type CanonicalChain struct {
 	listeners []chan<- *CanonicalChain
 }
 
-func (cc CanonicalChain) Head() *Block {
+func (cc *CanonicalChain) Head() *Block {
 	head := cc.head.Load()
 	if head == nil {
 		return nil
@@ -43,11 +44,15 @@ func (cc CanonicalChain) Head() *Block {
 	}
 }
 
+func (cc *CanonicalChain) BlockByHash(hash string) (*Block, bool) {
+	return cc.blocksByHash.Get(hash)
+}
+
 func (cc *CanonicalChain) AddListener(ch chan<- *CanonicalChain) {
 	cc.listeners = append(cc.listeners, ch)
 }
 
-func (cc CanonicalChain) String() string {
+func (cc *CanonicalChain) String() string {
 	var sb strings.Builder
 	block := cc.Head()
 	for block != nil {
@@ -80,8 +85,8 @@ func NewCanonicalChain(
 	maxDistanceFromHead int,
 ) (*CanonicalChain, error) {
 	bc := CanonicalChain{
-		networkId:           networkId,
-		chainId:             chainId,
+		NetworkId:           networkId,
+		ChainId:             chainId,
 		maxDistanceFromHead: maxDistanceFromHead,
 		updates:             updates,
 		log:                 log.WithField("component", "CanonicalChain"),
@@ -90,7 +95,7 @@ func NewCanonicalChain(
 	return &bc, nil
 }
 
-func (cc CanonicalChain) Start() {
+func (cc *CanonicalChain) Start() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 

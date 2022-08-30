@@ -66,7 +66,7 @@
     in {
       # nix build .#<app>
       packages = let
-        vendorSha256 = "sha256-HmAzWzdjVkVGZH0CazIf032MpANpkakDLYcY8UOyM6k=";
+        vendorSha256 = "sha256-ryIdOXIbIelmJtPbGfqpVD+yTDiyWgl5sF4wefYc5ns=";
       in
         flattenTree rec {
           tethys-proxy = buildGoApp {
@@ -126,6 +126,7 @@
             protobuf # https://github.com/protocolbuffers/protobuf
             protoc-gen-go # https://pkg.go.dev/google.golang.org/protobuf
             treefmt # https://github.com/numtide/treefmt
+            websocat # https://github.com/vi/websocat
           ]
           ++ lists.optionals isLinux [
             # for Darwin docker should be installed separately
