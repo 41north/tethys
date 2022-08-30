@@ -10,10 +10,9 @@ networks:
 
 services:
   nats:
-    image: nats:2.8.3-alpine
     container_name: nats
-    volumes:
-      - ./docker/nats/:/etc/nats:ro
+    build:
+      context: docker/images/nats
     ports:
       - "4222:4222" # client connections
       - "6222:6222" # routing port for clustering
@@ -24,7 +23,7 @@ services:
   geth-bootnode:
     container_name: geth-bootnode
     build:
-      context: docker/geth
+      context: docker/images/geth
       args:
         - ACCOUNT_PASSWORD=${GETH_ACCOUNT_PASSWORD}
     command:
@@ -39,7 +38,7 @@ services:
   geth-miner:
     container_name: geth-miner
     build:
-      context: docker/geth
+      context: docker/images/geth
     depends_on:
       - geth-bootnode
     command:
@@ -54,7 +53,7 @@ services:
   geth-rpc-1:
     container_name: geth-rpc-1
     build:
-      context: docker/geth
+      context: docker/images/geth
     depends_on:
       - geth-bootnode
     command:
@@ -95,7 +94,7 @@ services:
   geth-rpc-2:
     container_name: geth-rpc-2
     build:
-      context: docker/geth
+      context: docker/images/geth
     depends_on:
       - geth-bootnode
     command:
@@ -133,7 +132,7 @@ services:
   geth-rpc-3:
     container_name: geth-rpc-3
     build:
-      context: docker/geth
+      context: docker/images/geth
     depends_on:
       - geth-bootnode
     command:

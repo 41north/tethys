@@ -1,0 +1,118 @@
+version: "3.8"
+
+configs:
+  genesis.ssz:
+    file: ${PRYSM_CHECKPOINT}/genesis.ssz
+
+networks:
+  tethys:
+    name: tethys
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.254.0/28
+
+services:
+  prysm:
+    image: gcr.io/prysmaticlabs/prysm/beacon-chain:v3.0.0
+    restart: unless-stopped
+    user: "${HOST_UID}:${HOST_GID}"
+    command: --datadir=/data
+      --rpc-host=0.0.0.0
+      --monitoring-host=0.0.0.0
+      --execution-endpoint=http://erigon:8551
+      --sepolia
+      --jwt-secret=/erigon-data/jwt.hex
+      --accept-terms-of-use
+      --genesis-state=/genesis.ssz
+      --grpc-gateway-host="0.0.0.0"
+      --grpc-gateway-corsdomain='*'
+      --checkpoint-sync-url=https://sepolia.checkpoint-sync.ethdevops.io
+      --genesis-beacon-api-url=https://sepolia.checkpoint-sync.ethdevops.io
+    networks:
+      - tethys
+    ports:
+      - "3500:3500"
+      - "13000:13000"
+      - "12000:12000/udp"
+    volumes:
+      - type: bind
+        source: "${ERIGON_DATA}"
+        target: /erigon-data
+      - type: bind
+        source: "${PRYSM_DATA}"
+        target: /data
+    depends_on:
+      - "erigon"
+    mem_swappiness: 0
+    configs:
+      - genesis.ssz
+
+  erigon:
+    image: otterscan/erigon:v2022.08.03-otterscan
+    restart: unless-stopped
+    user: "${HOST_UID}:${HOST_GID}"
+    command: erigon
+      --chain=sepolia
+      --datadir=/erigon-data
+      --torrent.download.slots=7
+      --http.api="eth,net,erigon,ots"
+      --ws
+      --http.corsdomain="*"
+      --http.addr="0.0.0.0"
+      --http.vhosts='*'
+      --authrpc.addr="erigon"
+      --authrpc.vhosts="erigon"
+    networks:
+      - tethys
+    ports:
+      - "8545:8545"
+      - "30303:30303/tcp"
+      - "30303:30303/udp"
+      - "42069:42069/tcp"
+      - "42069:42069/udp"
+    volumes:
+      - type: bind
+        source: "${ERIGON_DATA}"
+        target: /erigon-data
+    mem_swappiness: 0
+
+  otterscan:
+    image: otterscan/otterscan:v2022.04.01-otterscan
+    restart: unless-stopped
+    networks:
+      - tethys
+    ports:
+      - "3000:80"
+    depends_on:
+      - "prysm"
+      - "erigon"
+
+  nats:
+    container_name: nats
+    build:
+      context: docker/images/nats
+    ports:
+      - "4222:4222" # client connections
+      - "6222:6222" # routing port for clustering
+      - "8222:8222" # http management port for information reporting
+    networks:
+      - tethys
+
+  proxy:
+    container_name: proxy
+    image: 41north/tethys-proxy:dev
+    restart: unless-stopped
+    depends_on:
+      - nats
+    networks:
+      - tethys
+    ports:
+      - "8080:8080"
+    command:
+      - eth
+      - --log-level=debug
+    environment:
+      NATS_URL: ns://nats:4222
+      ETH_NETWORK_ID: 11155111 # sepolia
+      ETH_CHAIN_ID: 11155111
