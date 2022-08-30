@@ -25,7 +25,7 @@ code:
 
 # Builds a concrete binary using go
 go-build PROGRAM:
-  go build -o ./out/{{PROGRAM}} ./cmd/{{PROGRAM}}
+  go build -o ./result/go/{{PROGRAM}} ./cmd/{{PROGRAM}}
 
 # Builds all binaries using go
 go-build-all: (go-build "proxy") (go-build "sidecar")
@@ -39,13 +39,13 @@ nix-build-all: (nix-build-docker-images) (nix-build-binaries)
 
 # Builds only the binaries using nix
 nix-build-binaries:
-  nix build -o result-tethys-proxy .#tethys-proxy
-  nix build -o result-tethys-sidecar .#tethys-sidecar
+  nix build -o ./result/nix/tethys-proxy .#tethys-proxy
+  nix build -o ./result/nix/tethys-sidecar .#tethys-sidecar
 
 # Builds the docker images and loads them into docker
 nix-build-docker-images:
-  nix build -o result-tethys-proxy-docker .#tethys-proxy-docker && docker load < result-tethys-proxy-docker
-  nix build -o result-tethys-sidecar-docker .#tethys-sidecar-docker && docker load < result-tethys-sidecar-docker
+  nix build -o ./result/docker/tethys-proxy .#tethys-proxy-docker && docker load < result/docker/tethys-proxy
+  nix build -o ./result/docker/tethys-sidecar .#tethys-sidecar-docker && docker load < result/docker/tethys-sidecar
 
 # Checks the source with nix
 nix-check:
@@ -53,5 +53,5 @@ nix-check:
 
 # Cleans all outputs
 clean:
-  rm -rf result* out/
+  rm -rf result*
 alias c := clean
