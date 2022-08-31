@@ -8,15 +8,15 @@ import (
 )
 
 const (
-	DefaultAddress                = ":8080"
-	DefaultNetworkId              = uint64(1)
-	DefaultChainId                = uint64(1)
-	DefaultNatsUrl                = "ns://127.0.0.1:4222"
-	DefaultNatsEmbedded           = false
-	DefaultNatsEmbeddedConfigPath = ""
-	DefaultBucketClientStatus     = "eth_client_statuses"
-	DefaultBucketClientProfiles   = "eth_client_profiles"
-	DefaultMaxDistanceFromHead    = 3
+	DefaultAddress                    = ":8080"
+	DefaultNetworkId                  = uint64(1)
+	DefaultChainId                    = uint64(1)
+	DefaultNatsUrl                    = "ns://127.0.0.1:4222"
+	DefaultNatsEmbedded               = false
+	DefaultNatsEmbeddedConfigPath     = ""
+	DefaultBucketClientStatusFormat   = "eth_%d_%d_client_statuses"
+	DefaultBucketClientProfilesFormat = "eth_%d_%d_client_profiles"
+	DefaultMaxDistanceFromHead        = 3
 )
 
 type Option func(opts *Options) error
@@ -36,9 +36,9 @@ type Options struct {
 
 	NatsEmbeddedConfigPath string
 
-	BucketClientStatuses string
+	BucketClientStatusesFormat string
 
-	BucketClientProfiles string
+	BucketClientProfilesFormat string
 
 	MaxDistanceFromHead int
 }
@@ -85,31 +85,31 @@ func NatsEmbeddedConfigPath(path string) Option {
 	}
 }
 
-func BucketClientStatuses(bucket string) Option {
+func BucketClientStatusesFormat(bucket string) Option {
 	return func(opts *Options) error {
-		opts.BucketClientStatuses = bucket
+		opts.BucketClientStatusesFormat = bucket
 		return nil
 	}
 }
 
-func BucketClientProfiles(bucket string) Option {
+func BucketClientProfilesFormat(bucket string) Option {
 	return func(opts *Options) error {
-		opts.BucketClientProfiles = bucket
+		opts.BucketClientProfilesFormat = bucket
 		return nil
 	}
 }
 
 func GetDefaultOptions() Options {
 	return Options{
-		Address:                DefaultAddress,
-		NetworkId:              DefaultNetworkId,
-		ChainId:                DefaultChainId,
-		NatsUrl:                DefaultNatsUrl,
-		NatsEmbedded:           DefaultNatsEmbedded,
-		NatsEmbeddedConfigPath: DefaultNatsEmbeddedConfigPath,
-		BucketClientStatuses:   DefaultBucketClientStatus,
-		BucketClientProfiles:   DefaultBucketClientProfiles,
-		MaxDistanceFromHead:    DefaultMaxDistanceFromHead,
+		Address:                    DefaultAddress,
+		NetworkId:                  DefaultNetworkId,
+		ChainId:                    DefaultChainId,
+		NatsUrl:                    DefaultNatsUrl,
+		NatsEmbedded:               DefaultNatsEmbedded,
+		NatsEmbeddedConfigPath:     DefaultNatsEmbeddedConfigPath,
+		BucketClientStatusesFormat: DefaultBucketClientStatusFormat,
+		BucketClientProfilesFormat: DefaultBucketClientProfilesFormat,
+		MaxDistanceFromHead:        DefaultMaxDistanceFromHead,
 	}
 }
 

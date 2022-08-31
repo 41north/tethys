@@ -45,7 +45,7 @@ func InitRouter(opts Options) error {
 	canonicalChain.Start()
 
 	// init the response cache
-	respCachePrefix := fmt.Sprintf("eth_resp_cache_%d_%d", opts.NetworkId, opts.ChainId)
+	respCachePrefix := fmt.Sprintf("eth_%d_%d_cache_responses", opts.NetworkId, opts.ChainId)
 
 	respCache := natsutil.NewCache[jsonrpc.Response](
 		respCachePrefix,

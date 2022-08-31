@@ -3,30 +3,33 @@ package sidecar
 import (
 	"context"
 
+	"github.com/41north/tethys/pkg/eth"
+	"github.com/juju/errors"
+
 	log "github.com/sirupsen/logrus"
 )
 
 // Default Constants
 const (
-	DefaultClientURL           = "ws://127.0.0.1:8546"
-	DefaultNatsURL             = "ns://127.0.0.1:4222"
-	DefaultClientProfileBucket = "eth_client_profiles"
-	DefaultClientStatusBucket  = "eth_client_statuses"
+	DefaultClientURL            = "ws://127.0.0.1:8546"
+	DefaultClientConnectionType = eth.ConnectionTypeDirect
+	DefaultNatsURL              = "ns://127.0.0.1:4222"
+	DefaultBucketClientProfile  = "eth_client_profiles"
+	DefaultBucketClientStatus   = "eth_client_statuses"
 )
 
 type Option func(opts *Options) error
 
 // Options can be used to create a customized connection.
 type Options struct {
-	// Websocket url for connecting to a eth client
-	ClientUrl string
+	ClientUrl            string
+	ClientId             *string
+	ClientConnectionType eth.ConnectionType
 
-	// NATS server url
 	NatsUrl string
 
-	ClientProfileBucket string
-
-	ClientStatusBucket string
+	BucketClientProfile string
+	BucketClientStatus  string
 }
 
 func ClientUrl(url string) Option {
@@ -43,16 +46,33 @@ func NatsUrl(url string) Option {
 	}
 }
 
-func ClientProfileBucket(bucket string) Option {
+func BucketClientProfile(bucket string) Option {
 	return func(opts *Options) error {
-		opts.ClientProfileBucket = bucket
+		opts.BucketClientProfile = bucket
 		return nil
 	}
 }
 
-func ClientStatusBucket(bucket string) Option {
+func BucketClientStatus(bucket string) Option {
 	return func(opts *Options) error {
-		opts.ClientStatusBucket = bucket
+		opts.BucketClientStatus = bucket
+		return nil
+	}
+}
+
+func ClientId(id string) Option {
+	return func(opts *Options) error {
+		opts.ClientId = &id
+		return nil
+	}
+}
+
+func ClientConnectionType(connectionType eth.ConnectionType) Option {
+	return func(opts *Options) error {
+		if connectionType == -1 {
+			return errors.New("invalid connection type")
+		}
+		opts.ClientConnectionType = connectionType
 		return nil
 	}
 }
@@ -60,10 +80,11 @@ func ClientStatusBucket(bucket string) Option {
 // GetDefaultOptions returns default configuration options for the sidecar.
 func GetDefaultOptions() Options {
 	return Options{
-		ClientUrl:           DefaultClientURL,
-		NatsUrl:             DefaultNatsURL,
-		ClientProfileBucket: DefaultClientProfileBucket,
-		ClientStatusBucket:  DefaultClientStatusBucket,
+		ClientUrl:            DefaultClientURL,
+		ClientConnectionType: DefaultClientConnectionType,
+		NatsUrl:              DefaultNatsURL,
+		BucketClientProfile:  DefaultBucketClientProfile,
+		BucketClientStatus:   DefaultBucketClientStatus,
 	}
 }
 
@@ -72,6 +93,13 @@ func Run(ctx context.Context, options ...Option) error {
 	for _, opt := range options {
 		if err := opt(&opts); err != nil {
 			return err
+		}
+	}
+
+	// extra options validation
+	if opts.ClientConnectionType == eth.ConnectionTypeManaged {
+		if opts.ClientId == nil {
+			return errors.New("clientId option must be specified when connection type is managed")
 		}
 	}
 

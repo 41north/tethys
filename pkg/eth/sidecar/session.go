@@ -19,8 +19,10 @@ import (
 )
 
 type clientSession struct {
-	url string
-	log *log.Entry
+	url            string
+	connectionType eth.ConnectionType
+	clientId       *string
+	log            *log.Entry
 
 	maxRetryDelay time.Duration
 
@@ -41,7 +43,9 @@ type clientSession struct {
 
 func newClientSession(opts Options) clientSession {
 	return clientSession{
-		url: opts.ClientUrl,
+		url:            opts.ClientUrl,
+		connectionType: opts.ClientConnectionType,
+		clientId:       opts.ClientId,
 		log: log.WithFields(log.Fields{
 			"component": "ClientSession",
 			"url":       opts.ClientUrl,
@@ -103,13 +107,16 @@ func (cs *clientSession) connect(ctx context.Context) error {
 	}
 
 	// init the state stores based on the client's network and chain id
-	stateManager, err := natseth.NewStateManager(natsJs, natseth.NetworkAndChainId(clientProfile.NetworkId, clientProfile.ChainId))
+	stateManager, err := natseth.NewStateManager(
+		natsJs,
+		natseth.NetworkAndChainId(clientProfile.NetworkId, clientProfile.ChainId),
+	)
 	if err != nil {
 		return errors.Annotate(err, "failed to initialise state manager")
 	}
 
 	// store the client profile in NATS
-	_, err = stateManager.Profiles.Put(clientProfile.Id(), *clientProfile)
+	_, err = stateManager.Profiles.Put(clientProfile.Id, *clientProfile)
 	if err != nil {
 		return errors.Annotate(err, "failed to put client profile in NATS")
 	}
@@ -163,17 +170,32 @@ func (cs *clientSession) connect(ctx context.Context) error {
 }
 
 func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	var err error
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	nodeInfo, err := cs.client.NodeInfo(ctx)
-	if err != nil {
-		return nil, errors.New("Could not retrieve client node info")
+	var nodeInfo *web3.NodeInfo
+	// admin api is typically only available for direct connections
+	if cs.connectionType == eth.ConnectionTypeDirect {
+		nodeInfo, err = cs.client.NodeInfo(ctx)
+		if err != nil {
+			return nil, errors.Annotate(err, "Could not retrieve client node info")
+		}
 	}
 
-	clientVersion, err := nodeInfo.ParseClientVersion()
-	if err != nil {
-		return nil, errors.New("Could not determine client client version")
+	var clientVersion web3.ClientVersion
+	if nodeInfo != nil {
+		clientVersion, err = nodeInfo.ParseClientVersion()
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to parse client version from node info")
+		}
+	} else {
+		cv, err := cs.client.Web3ClientVersion(ctx)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to retrieve client version")
+		}
+		clientVersion = *cv
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
@@ -202,10 +224,23 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 		return nil, errors.New("failed to parse chain id")
 	}
 
+	// determine the client id
+
+	var clientId string
+	switch cs.connectionType {
+	case eth.ConnectionTypeDirect:
+		clientId = nodeInfo.Id
+	case eth.ConnectionTypeManaged:
+		clientId = *cs.clientId
+	default:
+		return nil, errors.Errorf("unexpected connection type: %s", cs.connectionType)
+	}
+
 	profile := eth.ClientProfile{
+		Id:            clientId,
 		NetworkId:     networkId,
 		ChainId:       chainId,
-		NodeInfo:      *nodeInfo,
+		NodeInfo:      nodeInfo,
 		ClientVersion: clientVersion,
 	}
 
@@ -244,18 +279,18 @@ func (cs *clientSession) buildInitialClientStatus(profile *eth.ClientProfile) (*
 	}
 
 	return &eth.ClientStatus{
-		Id:         profile.Id(),
+		Id:         profile.Id,
 		Head:       head,
 		SyncStatus: syncStatus,
 	}, nil
 }
 
 func (cs *clientSession) listenForRpcRequests(ctx context.Context) error {
-	clientId := cs.clientProfile.Id()
+	clientId := cs.clientProfile.Id
 	networkId := strconv.FormatUint(cs.clientProfile.NetworkId, 10)
 	chainId := strconv.FormatUint(cs.clientProfile.ChainId, 10)
 
-	srv, err := natsutil.NewRpcServer(cs.clientProfile.Id(), natsConn, cs.client)
+	srv, err := natsutil.NewRpcServer(cs.clientProfile.Id, natsConn, cs.client)
 	if err != nil {
 		return errors.Annotate(err, "failed to create nats rpc server")
 	}
@@ -307,7 +342,7 @@ func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
 		cs.log.Debug("newHeads subscription closed")
 
 		// delete status entry in kv store
-		if err := cs.stateManager.Status.Delete(cs.clientProfile.Id()); err != nil {
+		if err := cs.stateManager.Status.Delete(cs.clientProfile.Id); err != nil {
 			log.WithError(err).Warn("failed to remove client status from kv store")
 		}
 
@@ -383,7 +418,7 @@ func (cs *clientSession) buildNewHeadsPublisher() error {
 	networkId := strconv.FormatUint(cp.NetworkId, 10)
 	chainId := strconv.FormatUint(cp.ChainId, 10)
 
-	subject := natsutil.SubjectName("eth", "newHeads", networkId, chainId, cv.Name, version, cp.Id())
+	subject := natsutil.SubjectName("eth", "newHeads", networkId, chainId, cv.Name, version, cp.Id)
 
 	publisher, err := natsutil.NewPublisher[web3.NewHead](
 		natsJs, subject,

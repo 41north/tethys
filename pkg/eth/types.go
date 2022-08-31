@@ -1,11 +1,55 @@
 package eth
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/41north/tethys/pkg/eth/web3"
 )
+
+const (
+	ConnectionTypeDirect = iota
+	ConnectionTypeManaged
+)
+
+type ConnectionType int
+
+func (ct ConnectionType) String() (result string) {
+	types := []string{"ConnectionTypeDirect", "ConnectionTypeManaged"}
+	if len(types) < int(ct) {
+		return ""
+	}
+	return types[ct]
+}
+
+func ToConnectionType(s string) ConnectionType {
+	switch s {
+	case "ConnectionTypeDirect":
+		return ConnectionTypeDirect
+	case "ConnectionTypeManaged":
+		return ConnectionTypeManaged
+	default:
+		return -1
+	}
+}
+
+// MarshalJSON implements a custom json marshaller for ConnectionType.
+func (ct ConnectionType) MarshalJSON() ([]byte, error) {
+	// we remove the 'ConnectionType' prefix
+	return json.Marshal(ct.String()[8:])
+}
+
+// UnmarshalJSON implements a custom json unmarshaller for ConnectionType.
+func (ct *ConnectionType) UnmarshalJSON(data []byte) error {
+	var ctStr string
+	if err := json.Unmarshal(data, &ctStr); err != nil {
+		return err
+	}
+	// we add the 'ConnectionType' prefix before parsing
+	*ct = ToConnectionType("ConnectionType" + ctStr)
+	return nil
+}
 
 type NetworkAndChainId struct {
 	NetworkId uint64 `json:"networkId"`
@@ -13,14 +57,14 @@ type NetworkAndChainId struct {
 }
 
 type ClientProfile struct {
-	NetworkId     uint64             `json:"networkId"`
-	ChainId       uint64             `json:"chainId"`
-	NodeInfo      web3.NodeInfo      `json:"nodeInfo"`
-	ClientVersion web3.ClientVersion `json:"clientVersion"`
-}
+	Id             string         `json:"id"`
+	ConnectionType ConnectionType `json:"connectionType"`
 
-func (cp ClientProfile) Id() string {
-	return cp.NodeInfo.Id
+	NetworkId uint64 `json:"networkId"`
+	ChainId   uint64 `json:"chainId"`
+
+	ClientVersion web3.ClientVersion `json:"clientVersion"`
+	NodeInfo      *web3.NodeInfo     `json:"nodeInfo,omitempty"` // unavailable from third party providers e.g. alchemy
 }
 
 func (cp ClientProfile) String() string {
