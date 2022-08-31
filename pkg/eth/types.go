@@ -13,6 +13,8 @@ const (
 	ConnectionTypeManaged
 )
 
+var ConnectionTypes = []ConnectionType{ConnectionTypeDirect, ConnectionTypeManaged}
+
 type ConnectionType int
 
 func (ct ConnectionType) String() (result string) {
@@ -37,7 +39,7 @@ func ToConnectionType(s string) ConnectionType {
 // MarshalJSON implements a custom json marshaller for ConnectionType.
 func (ct ConnectionType) MarshalJSON() ([]byte, error) {
 	// we remove the 'ConnectionType' prefix
-	return json.Marshal(ct.String()[8:])
+	return json.Marshal(ct.String())
 }
 
 // UnmarshalJSON implements a custom json unmarshaller for ConnectionType.
@@ -47,7 +49,7 @@ func (ct *ConnectionType) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	// we add the 'ConnectionType' prefix before parsing
-	*ct = ToConnectionType("ConnectionType" + ctStr)
+	*ct = ToConnectionType(ctStr)
 	return nil
 }
 

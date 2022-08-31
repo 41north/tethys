@@ -3,8 +3,13 @@ package proxy
 import (
 	"context"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/41north/tethys/pkg/eth"
+	natseth "github.com/41north/tethys/pkg/eth/nats"
+	"github.com/viney-shih/go-cache"
 
 	proxymethods "github.com/41north/tethys/pkg/eth/proxy/methods"
 	"github.com/41north/tethys/pkg/proxy"
@@ -38,7 +43,14 @@ func InitRouter(opts Options) error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create canonical chain tracker")
 	}
-	latestBlockRouter = NewLatestBlockRouter(natsConn, canonicalChain, 0)
+
+	profileCache := natsutil.NewCache[eth.ClientProfile](
+		1024,
+		stateManager.Profiles,
+		24*time.Hour,
+	)
+
+	latestBlockRouter = NewLatestBlockRouter(natsConn, canonicalChain, stateManager.Profiles, profileCache, 0)
 
 	canonicalChain.Start()
 
@@ -101,6 +113,32 @@ func errorResponse(err error, resp *jsonrpc.Response) {
 	}
 }
 
+type currentClients struct {
+	connectionType      eth.ConnectionType
+	clientsByConnection map[eth.ConnectionType]*btree.Set[string]
+}
+
+func (cc currentClients) clientIds() *btree.Set[string] {
+	return cc.clientsByConnection[cc.connectionType]
+}
+
+func (cc currentClients) String() string {
+	var sb strings.Builder
+	sb.WriteString("currentClients(")
+	sb.WriteString(cc.connectionType.String())
+	sb.WriteString("){ ")
+	for key, value := range cc.clientsByConnection {
+		if key > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(key.String())
+		sb.WriteString(" -> ")
+		sb.WriteString(strconv.Itoa(value.Len()))
+	}
+	sb.WriteString("}")
+	return sb.String()
+}
+
 type LatestBlockRouter struct {
 	conn *nats.EncodedConn
 
@@ -109,8 +147,11 @@ type LatestBlockRouter struct {
 
 	subjectPrefix string
 
-	clientIdx atomic.Uint64
-	clientIds atomic.Value
+	clientIdx      atomic.Uint64
+	currentClients atomic.Value
+
+	profileStore natseth.ProfileStore
+	profileCache cache.Cache
 
 	log *log.Entry
 }
@@ -118,6 +159,8 @@ type LatestBlockRouter struct {
 func NewLatestBlockRouter(
 	conn *nats.EncodedConn,
 	chain *tracking.CanonicalChain,
+	profileStore natseth.ProfileStore,
+	profileCache cache.Cache,
 	maxDistanceFromHead int,
 ) natsutil.Router {
 	subjectPrefix := natsutil.SubjectName(
@@ -131,6 +174,8 @@ func NewLatestBlockRouter(
 		chain:               chain,
 		maxDistanceFromHead: maxDistanceFromHead,
 		subjectPrefix:       subjectPrefix,
+		profileStore:        profileStore,
+		profileCache:        profileCache,
 		log: log.WithFields(log.Fields{
 			"component":           "LatestBlockRouter(latest)",
 			"maxDistanceFromHead": maxDistanceFromHead,
@@ -143,6 +188,20 @@ func NewLatestBlockRouter(
 	go router.listenForUpdates(chainUpdates, 100*time.Millisecond)
 
 	return router
+}
+
+func (r *LatestBlockRouter) getClientProfile(id string) (*eth.ClientProfile, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var profile eth.ClientProfile
+	err := r.profileCache.GetByFunc(ctx, r.profileStore.Bucket(), id, &profile, func() (interface{}, error) {
+		entry, err := r.profileStore.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		return entry.Value()
+	})
+	return &profile, err
 }
 
 func (r *LatestBlockRouter) listenForUpdates(updates <-chan *tracking.CanonicalChain, timeout time.Duration) {
@@ -171,13 +230,25 @@ func (r *LatestBlockRouter) listenForUpdates(updates <-chan *tracking.CanonicalC
 }
 
 func (r *LatestBlockRouter) onUpdate(chain *tracking.CanonicalChain) {
-	clientIds := btree.Set[string]{}
+	clientsByConnection := make(map[eth.ConnectionType]*btree.Set[string])
 
 	head := chain.Head()
 	distanceFromHead := 0
 
 	for head != nil && distanceFromHead <= r.maxDistanceFromHead {
 		head.ClientIds.Scan(func(clientId string) bool {
+			profile, err := r.getClientProfile(clientId)
+			if err != nil {
+				r.log.WithError(err).WithField("clientId", clientId).Error("failed to load client profile")
+				return true
+			}
+
+			clientIds, ok := clientsByConnection[profile.ConnectionType]
+			if !ok {
+				clientIds = &btree.Set[string]{}
+				clientsByConnection[profile.ConnectionType] = clientIds
+			}
+
 			clientIds.Insert(clientId)
 			return true
 		})
@@ -186,21 +257,39 @@ func (r *LatestBlockRouter) onUpdate(chain *tracking.CanonicalChain) {
 		distanceFromHead += 1
 	}
 
-	// update the client id set
-	r.clientIds.Store(&clientIds)
-	r.log.WithField("clients", clientIds.Len()).Debug("processed update")
+	var update currentClients
+
+	if len(clientsByConnection) == 0 {
+		r.currentClients.Store(nil)
+	} else {
+		// determine the preferred connection type
+		var preferredConnection eth.ConnectionType
+		for _, connectionType := range eth.ConnectionTypes {
+			_, ok := clientsByConnection[connectionType]
+			if ok {
+				preferredConnection = connectionType
+				break
+			}
+		}
+
+		update = currentClients{
+			connectionType:      preferredConnection,
+			clientsByConnection: clientsByConnection,
+		}
+		r.currentClients.Store(update)
+	}
+
+	r.log.WithField("clients", update).Debug("processed update")
 }
 
 func (r *LatestBlockRouter) nextSubject() (string, error) {
-	clientIdRef := r.clientIds.Load()
-	if clientIdRef == nil {
+	currentClientsRef := r.currentClients.Load()
+	if currentClientsRef == nil {
 		return "", natsutil.ErrNoClientsAvailable
 	}
 
-	clientIds := clientIdRef.(*btree.Set[string])
-	if clientIds.Len() == 0 {
-		return "", natsutil.ErrNoClientsAvailable
-	}
+	currentClients := currentClientsRef.(currentClients)
+	clientIds := currentClients.clientIds()
 
 	nextIdx := r.clientIdx.Add(1)
 	nextIdx = nextIdx % uint64(clientIds.Len())

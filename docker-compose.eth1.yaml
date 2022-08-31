@@ -61,12 +61,12 @@ services:
       --http
       --http.vhosts="*"
       --http.addr="0.0.0.0"
-      --http.api="eth,net,eth,debug,txpool,personal,admin"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
       --http.corsdomain="*"
       --http.rpcprefix="/"
       --ws
       --ws.addr="0.0.0.0"
-      --ws.api="eth,net,eth,debug,txpool,personal,admin"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
       --ws.rpcprefix="/"
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
@@ -102,12 +102,12 @@ services:
       --http
       --http.vhosts="*"
       --http.addr="0.0.0.0"
-      --http.api="eth,net,eth,debug,txpool,personal,admin"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
       --http.corsdomain="*"
       --http.rpcprefix="/"
       --ws
       --ws.addr="0.0.0.0"
-      --ws.api="eth,net,eth,debug,txpool,personal,admin"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
       --ws.rpcprefix="/"
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
@@ -140,12 +140,12 @@ services:
       --http
       --http.vhosts="*"
       --http.addr="0.0.0.0"
-      --http.api="eth,net,eth,debug,txpool,personal,admin"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
       --http.corsdomain="*"
       --http.rpcprefix="/"
       --ws
       --ws.addr="0.0.0.0"
-      --ws.api="eth,net,eth,debug,txpool,personal,admin"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
       --ws.rpcprefix="/"
       --networkid=${GETH_NETWORK_ID}
       --netrestrict="172.16.254.0/28"
@@ -166,6 +166,8 @@ services:
     environment:
       NATS_URL: ns://nats:4222
       WEB3_URL: ws://geth-rpc-3:8546
+      WEB3_CONNECTION_TYPE: ConnectionTypeManaged
+      WEB3_CLIENT_ID: alchemy
 
   proxy:
     container_name: proxy

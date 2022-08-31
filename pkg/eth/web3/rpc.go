@@ -83,13 +83,6 @@ func (c *Client) InvokeRequest(
 	return c.rpc.Invoke(ctx, req, resp)
 }
 
-func unmarshal[T any](resp *jsonrpc.Response, proto *T) error {
-	if resp.Error != nil {
-		return errors.Errorf("json rpc error, code = %d message = '%s'", resp.Error.Code, resp.Error.Message)
-	}
-	return json.Unmarshal(resp.Result, proto)
-}
-
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var resp jsonrpc.Response
 	if err := c.Invoke(ctx, "eth_blockNumber", nil, &resp); err != nil {
