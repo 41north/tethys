@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -39,23 +38,19 @@ func InitRouter(opts Options) error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create canonical chain tracker")
 	}
-
 	latestBlockRouter = NewLatestBlockRouter(natsConn, canonicalChain, 0)
 
 	canonicalChain.Start()
 
 	// init the response cache
-	respCachePrefix := fmt.Sprintf("eth_%d_%d_cache_responses", opts.NetworkId, opts.ChainId)
-
 	respCache := natsutil.NewCache[jsonrpc.Response](
-		respCachePrefix,
 		1024*10,
+		stateManager.Responses,
 		1*time.Hour,
-		jsContext,
 	)
 
 	// create a caching router backed by the latest block router
-	cachingRouter = natsutil.NewCachingRouter(respCache, respCachePrefix, latestBlockRouter)
+	cachingRouter = natsutil.NewCachingRouter(respCache, stateManager.Responses.Bucket(), latestBlockRouter)
 
 	// construct a map of supported methods
 	proxyMethods, err = proxymethods.Build(canonicalChain, cachingRouter)

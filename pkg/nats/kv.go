@@ -117,6 +117,10 @@ func (w kw[T]) Stop() error {
 }
 
 type KeyValue[T any] interface {
+	Delegate() nats.KeyValue
+
+	Bucket() string
+
 	Get(key string) (KeyValueEntry[T], error)
 
 	Put(key string, value T) (uint64, error)
@@ -146,6 +150,14 @@ func GetKeyValue[T any](js nats.JetStreamContext, bucket string) (KeyValue[T], e
 
 type kv[T any] struct {
 	kv nats.KeyValue
+}
+
+func (s kv[T]) Delegate() nats.KeyValue {
+	return s.kv
+}
+
+func (s kv[T]) Bucket() string {
+	return s.kv.Bucket()
 }
 
 func (s kv[T]) Get(key string) (KeyValueEntry[T], error) {
@@ -262,29 +274,17 @@ func (c kvCacheAdapter) Del(ctx context.Context, keys ...string) error {
 }
 
 func NewCache[V any](
-	name string,
 	localCacheSize int,
+	kv KeyValue[V],
 	ttl time.Duration,
-	js nats.JetStreamContext,
 ) cache.Cache {
-	kv, err := js.KeyValue(name)
-	// TODO for now we assume any error means the kv store doesn't exist
-	// TODO there are storage types and replica settings which we currently don't pass
-	// TODO how do we evolve cache settings?
-	if err != nil {
-		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
-			Bucket: name,
-			TTL:    ttl,
-		})
-	}
-
 	localCache := cache.NewTinyLFU(localCacheSize)
-	sharedCache := kvCacheAdapter{kv: kv}
+	sharedCache := kvCacheAdapter{kv: kv.Delegate()}
 
 	factory := cache.NewFactory(sharedCache, localCache)
 	return factory.NewCache([]cache.Setting{
 		{
-			Prefix: name, // todo what's the correct mapping for this?
+			Prefix: kv.Delegate().Bucket(), // todo what's the correct mapping for this?
 			MarshalFunc: func(value interface{}) ([]byte, error) {
 				return json.Marshal(value)
 			},
@@ -294,6 +294,12 @@ func NewCache[V any](
 			CacheAttributes: map[cache.Type]cache.Attribute{
 				cache.LocalCacheType:  {TTL: ttl}, // match the overall ttl for now
 				cache.SharedCacheType: {TTL: ttl}, // has no effect, but we set for consistency
+			},
+			MGetter: func(keys ...string) (interface{}, error) {
+				// set a relatively sane timeout, this may need revised
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				return sharedCache.MGet(ctx, keys)
 			},
 		},
 	})
