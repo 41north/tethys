@@ -26,25 +26,34 @@ func NetworkAndChainId(networkId uint64, chainId uint64) Option {
 	}
 }
 
-func BucketStatuses(name string) Option {
+func BucketStatusesHistory(history uint8) Option {
 	return func(opts *Options) error {
-		opts.BucketStatuses = name
+		opts.BucketConfigStatuses.History = history
 		return nil
 	}
 }
 
-func StatusHistory(history uint8) Option {
+func BucketStatusesFormat(name string) Option {
 	return func(opts *Options) error {
-		opts.StatusHistory = history
+		opts.BucketConfigStatuses.Format = name
 		return nil
 	}
 }
 
-func BucketProfiles(name string) Option {
+func BucketProfilesFormat(name string) Option {
 	return func(opts *Options) error {
-		opts.BucketProfiles = name
+		opts.BucketConfigProfiles.Format = name
 		return nil
 	}
+}
+
+type bucketConfigStatuses struct {
+	Format  string
+	History uint8
+}
+
+type bucketConfigProfiles struct {
+	Format string
 }
 
 type Options struct {
@@ -53,20 +62,24 @@ type Options struct {
 	NetworkId uint64
 	ChainId   uint64
 
-	StatusHistory uint8
-
-	BucketStatuses string
-	BucketProfiles string
+	BucketConfigStatuses bucketConfigStatuses
+	BucketConfigProfiles bucketConfigProfiles
 }
 
 func GetDefaultOptions() Options {
 	return Options{
-		Create:         false,
-		NetworkId:      1,
-		ChainId:        1,
-		BucketStatuses: "eth_client_statuses",
-		StatusHistory:  12,
-		BucketProfiles: "eth_client_profiles",
+		Create:    false,
+		NetworkId: 1,
+		ChainId:   1,
+
+		BucketConfigStatuses: bucketConfigStatuses{
+			Format:  "eth_%d_%d_client_statuses",
+			History: 12,
+		},
+
+		BucketConfigProfiles: bucketConfigProfiles{
+			Format: "eth_%d_%d_client_profiles",
+		},
 	}
 }
 
@@ -106,7 +119,8 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 }
 
 func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error) {
-	bucket := fmt.Sprintf("%s_%d_%d", opts.BucketStatuses, opts.NetworkId, opts.ChainId)
+	config := opts.BucketConfigStatuses
+	bucket := fmt.Sprintf(config.Format, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {
 		return natsutil.GetKeyValue[eth.ClientStatus](js, bucket)
@@ -114,12 +128,12 @@ func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error
 
 	return natsutil.CreateKeyValue[eth.ClientStatus](js, &nats.KeyValueConfig{
 		Bucket:  bucket,
-		History: opts.StatusHistory,
+		History: config.History,
 	})
 }
 
 func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, error) {
-	bucket := fmt.Sprintf("%s_%d_%d", opts.BucketProfiles, opts.NetworkId, opts.ChainId)
+	bucket := fmt.Sprintf(opts.BucketConfigProfiles.Format, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {
 		return natsutil.GetKeyValue[eth.ClientProfile](js, bucket)

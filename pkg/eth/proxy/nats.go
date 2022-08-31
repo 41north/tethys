@@ -80,6 +80,8 @@ func connectNats(opts Options) error {
 		jsContext,
 		natseth.NetworkAndChainId(opts.NetworkId, opts.ChainId),
 		natseth.Create(true),
+		natseth.BucketStatusesFormat(opts.BucketClientStatusesFormat),
+		natseth.BucketProfilesFormat(opts.BucketClientProfilesFormat),
 	)
 
 	if err != nil {
