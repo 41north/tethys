@@ -14,8 +14,8 @@ const (
 	DefaultNatsUrl                = "ns://127.0.0.1:4222"
 	DefaultNatsEmbedded           = false
 	DefaultNatsEmbeddedConfigPath = ""
-	DefaultClientStatusBucket     = "eth_client_statuses"
-	DefaultClientProfileBucket    = "eth_client_profiles"
+	DefaultBucketClientStatus     = "eth_client_statuses"
+	DefaultBucketClientProfiles   = "eth_client_profiles"
 	DefaultMaxDistanceFromHead    = 3
 )
 
@@ -36,9 +36,9 @@ type Options struct {
 
 	NatsEmbeddedConfigPath string
 
-	ClientStatusBucket string
+	BucketClientStatuses string
 
-	ClientProfileBucket string
+	BucketClientProfiles string
 
 	MaxDistanceFromHead int
 }
@@ -85,16 +85,16 @@ func NatsEmbeddedConfigPath(path string) Option {
 	}
 }
 
-func ClientStatusBucket(bucket string) Option {
+func BucketClientStatuses(bucket string) Option {
 	return func(opts *Options) error {
-		opts.ClientStatusBucket = bucket
+		opts.BucketClientStatuses = bucket
 		return nil
 	}
 }
 
-func ClientProfileBucket(bucket string) Option {
+func BucketClientProfiles(bucket string) Option {
 	return func(opts *Options) error {
-		opts.ClientProfileBucket = bucket
+		opts.BucketClientProfiles = bucket
 		return nil
 	}
 }
@@ -107,8 +107,8 @@ func GetDefaultOptions() Options {
 		NatsUrl:                DefaultNatsUrl,
 		NatsEmbedded:           DefaultNatsEmbedded,
 		NatsEmbeddedConfigPath: DefaultNatsEmbeddedConfigPath,
-		ClientStatusBucket:     DefaultClientStatusBucket,
-		ClientProfileBucket:    DefaultClientProfileBucket,
+		BucketClientStatuses:   DefaultBucketClientStatus,
+		BucketClientProfiles:   DefaultBucketClientProfiles,
 		MaxDistanceFromHead:    DefaultMaxDistanceFromHead,
 	}
 }

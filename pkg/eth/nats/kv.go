@@ -26,9 +26,9 @@ func NetworkAndChainId(networkId uint64, chainId uint64) Option {
 	}
 }
 
-func StatusBucket(name string) Option {
+func BucketStatuses(name string) Option {
 	return func(opts *Options) error {
-		opts.StatusBucket = name
+		opts.BucketStatuses = name
 		return nil
 	}
 }
@@ -40,9 +40,9 @@ func StatusHistory(history uint8) Option {
 	}
 }
 
-func ProfileBucket(name string) Option {
+func BucketProfiles(name string) Option {
 	return func(opts *Options) error {
-		opts.ProfileBucket = name
+		opts.BucketProfiles = name
 		return nil
 	}
 }
@@ -53,20 +53,20 @@ type Options struct {
 	NetworkId uint64
 	ChainId   uint64
 
-	StatusBucket  string
 	StatusHistory uint8
 
-	ProfileBucket string
+	BucketStatuses string
+	BucketProfiles string
 }
 
 func GetDefaultOptions() Options {
 	return Options{
-		Create:        false,
-		NetworkId:     1,
-		ChainId:       1,
-		StatusBucket:  "eth_client_statuses",
-		StatusHistory: 12,
-		ProfileBucket: "eth_client_profiles",
+		Create:         false,
+		NetworkId:      1,
+		ChainId:        1,
+		BucketStatuses: "eth_client_statuses",
+		StatusHistory:  12,
+		BucketProfiles: "eth_client_profiles",
 	}
 }
 
@@ -106,7 +106,7 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 }
 
 func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error) {
-	bucket := fmt.Sprintf("%s_%d_%d", opts.StatusBucket, opts.NetworkId, opts.ChainId)
+	bucket := fmt.Sprintf("%s_%d_%d", opts.BucketStatuses, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {
 		return natsutil.GetKeyValue[eth.ClientStatus](js, bucket)
@@ -119,7 +119,7 @@ func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error
 }
 
 func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, error) {
-	bucket := fmt.Sprintf("%s_%d_%d", opts.ProfileBucket, opts.NetworkId, opts.ChainId)
+	bucket := fmt.Sprintf("%s_%d_%d", opts.BucketProfiles, opts.NetworkId, opts.ChainId)
 
 	if !opts.Create {
 		return natsutil.GetKeyValue[eth.ClientProfile](js, bucket)
