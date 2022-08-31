@@ -3,12 +3,13 @@ package proxy
 import (
 	"context"
 	"fmt"
-	proxymethods "github.com/41north/tethys/pkg/eth/proxy/methods"
-	"github.com/41north/tethys/pkg/proxy"
-	"github.com/juju/errors"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	proxymethods "github.com/41north/tethys/pkg/eth/proxy/methods"
+	"github.com/41north/tethys/pkg/proxy"
+	"github.com/juju/errors"
 
 	"github.com/41north/tethys/pkg/eth/tracking"
 	"github.com/41north/tethys/pkg/jsonrpc"
@@ -27,7 +28,6 @@ var (
 )
 
 func InitRouter(opts Options) error {
-
 	var err error
 
 	watcher, err := stateManager.Status.WatchAll()
@@ -68,7 +68,6 @@ func closeRouter() {
 }
 
 func invoke(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response) {
-
 	// set the resp id to match the request
 	resp.Id = req.Id
 	resp.JsonRpc = "2.0"

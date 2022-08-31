@@ -73,7 +73,6 @@ func (r *staticRouter) RequestWithContext(_ context.Context, _ jsonrpc.Request, 
 }
 
 func NewStaticResult(result any) Router {
-
 	bytes, err := json.Marshal(result)
 	if err != nil {
 		panic("could not marshal result to json")

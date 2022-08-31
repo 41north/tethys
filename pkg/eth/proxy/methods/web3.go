@@ -14,7 +14,6 @@ const (
 )
 
 func web3Methods(router natsutil.Router) []proxy.Method {
-
 	return []proxy.Method{
 		proxy.NewMethod(Web3Sha3, router),
 		proxy.NewMethod(Web3ClientVersion, natsutil.NewStaticResult(ClientVersion)),
