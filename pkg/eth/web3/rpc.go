@@ -58,27 +58,29 @@ func (c *Client) Invoke(
 	ctx context.Context,
 	method string,
 	params any,
-) (*jsonrpc.Response, error) {
-	req := &jsonrpc.Request{
+	resp *jsonrpc.Response,
+) error {
+	req := jsonrpc.Request{
 		Method: method,
 	}
 
 	if params != nil {
 		bytes, err := json.Marshal(params)
 		if err != nil {
-			return nil, errors.Annotate(err, "failed to marshal params")
+			return errors.Annotate(err, "failed to marshal params")
 		}
 		req.Params = bytes
 	}
 
-	return c.rpc.Invoke(ctx, req)
+	return c.rpc.Invoke(ctx, req, resp)
 }
 
 func (c *Client) InvokeRequest(
 	ctx context.Context,
-	req *jsonrpc.Request,
-) (*jsonrpc.Response, error) {
-	return c.rpc.Invoke(ctx, req)
+	req jsonrpc.Request,
+	resp *jsonrpc.Response,
+) error {
+	return c.rpc.Invoke(ctx, req, resp)
 }
 
 func unmarshal[T any](resp *jsonrpc.Response, proto *T) error {
@@ -89,13 +91,13 @@ func unmarshal[T any](resp *jsonrpc.Response, proto *T) error {
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
-	resp, err := c.Invoke(ctx, "eth_blockNumber", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_blockNumber", nil, &resp); err != nil {
 		return nil, err
 	}
 
 	var hex string
-	if err = unmarshal[string](resp, &hex); err != nil {
+	if err := resp.UnmarshalResult(&hex); err != nil {
 		return nil, err
 	}
 
@@ -107,69 +109,66 @@ func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 }
 
 func (c *Client) NetVersion(ctx context.Context) (string, error) {
-	resp, err := c.Invoke(ctx, "net_version", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "net_version", nil, &resp); err != nil {
 		return "", err
 	}
 	var result string
-	err = unmarshal[string](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return result, err
 }
 
 func (c *Client) ChainId(ctx context.Context) (string, error) {
-	resp, err := c.Invoke(ctx, "eth_chainId", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_chainId", nil, &resp); err != nil {
 		return "", err
 	}
 	var result string
-	err = unmarshal[string](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return result, err
 }
 
 func (c *Client) NodeInfo(ctx context.Context) (*NodeInfo, error) {
-	resp, err := c.Invoke(ctx, "admin_nodeInfo", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "admin_nodeInfo", nil, &resp); err != nil {
 		return nil, err
 	}
 	var result NodeInfo
-	err = unmarshal[NodeInfo](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return &result, err
 }
 
 func (c *Client) Web3ClientVersion(ctx context.Context) (*ClientVersion, error) {
-	resp, err := c.Invoke(ctx, "web3_clientVersion", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "web3_clientVersion", nil, &resp); err != nil {
 		return nil, err
 	}
 	var result string
-	if err = unmarshal[string](resp, &result); err != nil {
+	if err := resp.UnmarshalResult(&result); err != nil {
 		return nil, err
 	}
-
 	cv, err := ParseClientVersion(result)
 	return &cv, err
 }
 
 func (c *Client) SyncProgress(ctx context.Context) (bool, error) {
-	resp, err := c.Invoke(ctx, "eth_syncing", nil)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_syncing", nil, &resp); err != nil {
 		return false, err
 	}
 	var syncing bool
-	if err := json.Unmarshal(resp.Result, &syncing); err == nil {
+	if err := resp.UnmarshalResult(&syncing); err == nil {
 		return syncing, nil
-	} else {
-		syncing = true
 	}
 	return syncing, nil
 }
 
 func (c *Client) LatestBlock(ctx context.Context) (*Block, error) {
-	resp, err := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false})
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false}, &resp); err != nil {
 		return nil, err
 	}
 	var result Block
-	err = unmarshal[Block](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return &result, err
 }
