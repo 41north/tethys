@@ -48,7 +48,6 @@ func Build(
 	chain *tracking.CanonicalChain,
 	latestBlockRouter natsutil.Router,
 ) (map[string]proxy.Method, error) {
-
 	result := make(map[string]proxy.Method)
 
 	// web3 methods

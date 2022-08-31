@@ -13,7 +13,6 @@ const (
 )
 
 func netMethods(chain *tracking.CanonicalChain) []proxy.Method {
-
 	return []proxy.Method{
 		proxy.NewMethod(NetVersion, natsutil.NewStaticResult(chain.NetworkId)),
 		proxy.NewMethod(NetListening, natsutil.NewStaticResult(true)),

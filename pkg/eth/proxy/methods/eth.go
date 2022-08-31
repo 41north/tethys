@@ -31,7 +31,6 @@ func ethMethods(
 	chain *tracking.CanonicalChain,
 	router natsutil.Router,
 ) []proxy.Method {
-
 	cacheRouteOpt := proxy.RouteOpts(natsutil.CacheRoute(true))
 
 	overrideLatestBlockOpt := func(idx int) proxy.MethodOpt {
