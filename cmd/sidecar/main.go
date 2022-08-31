@@ -11,16 +11,25 @@ type sidecarCmd struct {
 }
 
 var cli struct {
-	Debug bool          `short:"d" default:"0" help:"Enable debug logging."`
-	Eth   ethSidecarCmd `cmd:"" help:"Run an Ethereum sidecar"`
+	Log struct {
+		Level string `enum:"debug,info,warn,error" env:"LOG_LEVEL" default:"info" help:"Configure logging level."`
+	} `embed:"" prefix:"log-"`
+	Eth ethSidecarCmd `cmd:"" help:"Run an Ethereum sidecar"`
 }
 
 func main() {
 	ctx := kong.Parse(&cli)
 
-	// set debug for now
-	if cli.Debug {
+	// set log level
+	switch {
+	case cli.Log.Level == "debug":
 		log.SetLevel(log.DebugLevel)
+	case cli.Log.Level == "info":
+		log.SetLevel(log.InfoLevel)
+	case cli.Log.Level == "warn":
+		log.SetLevel(log.WarnLevel)
+	case cli.Log.Level == "error":
+		log.SetLevel(log.ErrorLevel)
 	}
 
 	// configure logging
