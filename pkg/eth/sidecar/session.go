@@ -237,11 +237,12 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 	}
 
 	profile := eth.ClientProfile{
-		Id:            clientId,
-		NetworkId:     networkId,
-		ChainId:       chainId,
-		NodeInfo:      nodeInfo,
-		ClientVersion: clientVersion,
+		Id:             clientId,
+		ConnectionType: cs.connectionType,
+		NetworkId:      networkId,
+		ChainId:        chainId,
+		NodeInfo:       nodeInfo,
+		ClientVersion:  clientVersion,
 	}
 
 	return &profile, nil
