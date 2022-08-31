@@ -88,16 +88,16 @@ func newCloseHandler(conn *websocket.Conn, delegate func(code int, message strin
 
 type invocation struct {
 	key    string
-	req    *Request
+	req    Request
 	result chan util.Result[Response]
 }
 
-func newInvocation(key string, req *Request) invocation {
+func newInvocation(key string, req Request) invocation {
 	return invocation{
 		key: key,
 		req: req,
 		// size 1 to prevent rendezvous and improve throughput
-		result: make(chan util.Result[Response]),
+		result: make(chan util.Result[Response], 1),
 	}
 }
 
@@ -331,10 +331,10 @@ func (c *Client) onResponse(resp *Response) {
 	inv.onResponse(resp)
 }
 
-func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
+func (c *Client) Invoke(ctx context.Context, req Request, resp *Response) error {
 	// check if connected
 	if !c.isConnected() {
-		return nil, ErrNotConnected
+		return ErrNotConnected
 	}
 
 	// create a new request with a unique id
@@ -346,17 +346,17 @@ func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
-		return nil, errors.Annotate(err, "failed to generate a uuid")
+		return errors.Annotate(err, "failed to generate a uuid")
 	}
 
 	key := id.String()
 
 	if err = uniqueRequest.WithStringId(key); err != nil {
-		return nil, errors.Annotate(err, "failed to set request id")
+		return errors.Annotate(err, "failed to set request id")
 	}
 
 	// create a new invocation and store for later dispatch
-	inv := newInvocation(key, &uniqueRequest)
+	inv := newInvocation(key, uniqueRequest)
 	c.invocationMap.Store(key, inv)
 
 	// handle a timeout or cancellation
@@ -381,7 +381,17 @@ func (c *Client) Invoke(ctx context.Context, req *Request) (*Response, error) {
 
 	// wait for response
 	result := <-inv.result
-	return result.Value()
+	invResp, err := result.Value()
+
+	if err == nil {
+		// copy values from invocation response
+		resp.Id = invResp.Id
+		resp.JsonRpc = invResp.JsonRpc
+		resp.Result = invResp.Result
+		resp.Error = invResp.Error
+	}
+
+	return err
 }
 
 // Close stops request processing and releases resources.

@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/juju/errors"
 )
@@ -64,6 +65,9 @@ type Error struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
+// Error renders e to a human-readable string for the error interface.
+func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message) }
+
 type Response struct {
 	Id      json.RawMessage `json:"id,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
@@ -73,6 +77,13 @@ type Response struct {
 
 func (r *Response) UnmarshalId() (any, error) {
 	return unmarshalId(r.Id)
+}
+
+func (r *Response) UnmarshalResult(payload any) error {
+	if r.Error != nil {
+		return r.Error
+	}
+	return json.Unmarshal(r.Result, payload)
 }
 
 func unmarshalId(id json.RawMessage) (any, error) {

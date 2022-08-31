@@ -51,22 +51,22 @@ func (sm *subManager) close() {
 }
 
 func (c *Client) Subscribe(ctx context.Context, params []interface{}) (string, error) {
-	resp, err := c.Invoke(ctx, "eth_subscribe", params)
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_subscribe", params, &resp); err != nil {
 		return "", err
 	}
 	var result string
-	err = unmarshal[string](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return result, err
 }
 
 func (c *Client) Unsubscribe(ctx context.Context, subscriptionId string) (bool, error) {
-	resp, err := c.Invoke(ctx, "eth_unsubscribe", []any{subscriptionId})
-	if err != nil {
+	var resp jsonrpc.Response
+	if err := c.Invoke(ctx, "eth_unsubscribe", []any{subscriptionId}, &resp); err != nil {
 		return false, err
 	}
 	var result bool
-	err = unmarshal[bool](resp, &result)
+	err := resp.UnmarshalResult(&result)
 	return result, err
 }
 

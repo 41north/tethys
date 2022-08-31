@@ -172,8 +172,8 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		resp, err := srv.client.InvokeRequest(ctx, &request)
-		if err != nil {
+		var resp jsonrpc.Response
+		if err := srv.client.InvokeRequest(ctx, request, &resp); err != nil {
 			respondWithError(msg, &request, &jsonrpc.Error{
 				Code:    -32603,
 				Message: "Internal error",
@@ -183,7 +183,7 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 		// replace id with original
 		resp.Id = id
 
-		respond(msg, resp)
+		respond(msg, &resp)
 	}()
 }
 
