@@ -57,6 +57,7 @@ type Options struct {
 	StatusHistory uint8
 
 	ProfileBucket string
+	MemPoolBucket string
 }
 
 func GetDefaultOptions() Options {
@@ -67,6 +68,7 @@ func GetDefaultOptions() Options {
 		StatusBucket:  "eth_client_statuses",
 		StatusHistory: 12,
 		ProfileBucket: "eth_client_profiles",
+		MemPoolBucket: "eth_mem_pool",
 	}
 }
 
@@ -74,10 +76,13 @@ type StatusStore = natsutil.KeyValue[eth.ClientStatus]
 
 type ProfileStore = natsutil.KeyValue[eth.ClientProfile]
 
+type MemPoolStore = natsutil.KeyValue[[]byte]
+
 type StateManager struct {
 	Opts     Options
 	Status   StatusStore
 	Profiles ProfileStore
+	MemPool  MemPoolStore
 }
 
 func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager, error) {
@@ -98,10 +103,16 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 		return nil, errors.Annotate(err, "failed to init profile store")
 	}
 
+	memPoolStore, err := initMemPoolStore(js, opts)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to init mem pool store")
+	}
+
 	return &StateManager{
 		Opts:     opts,
 		Status:   statusStore,
 		Profiles: profileStore,
+		MemPool:  memPoolStore,
 	}, nil
 }
 
@@ -126,6 +137,18 @@ func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, err
 	}
 
 	return natsutil.CreateKeyValue[eth.ClientProfile](js, &nats.KeyValueConfig{
+		Bucket: bucket,
+	})
+}
+
+func initMemPoolStore(js nats.JetStreamContext, opts Options) (MemPoolStore, error) {
+	bucket := fmt.Sprintf("%s_%d_%d", opts.MemPoolBucket, opts.NetworkId, opts.ChainId)
+
+	if !opts.Create {
+		return natsutil.GetKeyValue[[]byte](js, bucket)
+	}
+
+	return natsutil.CreateKeyValue[[]byte](js, &nats.KeyValueConfig{
 		Bucket: bucket,
 	})
 }

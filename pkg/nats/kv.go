@@ -119,6 +119,8 @@ func (w kw[T]) Stop() error {
 type KeyValue[T any] interface {
 	Get(key string) (KeyValueEntry[T], error)
 
+	Create(key string, value T) (uint64, error)
+
 	Put(key string, value T) (uint64, error)
 
 	Watch(key string, opts ...nats.WatchOpt) (KeyWatcher[T], error)
@@ -159,6 +161,14 @@ func (s kv[T]) Put(key string, value T) (uint64, error) {
 		return 0, errors.Annotate(err, "failed to marshal value to json")
 	}
 	return s.kv.Put(key, bytes)
+}
+
+func (s kv[T]) Create(key string, value T) (uint64, error) {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return 0, errors.Annotate(err, "failed to marshal value to json")
+	}
+	return s.kv.Create(key, bytes)
 }
 
 func (s kv[T]) Delete(key string) error {

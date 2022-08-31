@@ -3,6 +3,7 @@ package sidecar
 import (
 	"context"
 	"fmt"
+	"github.com/41north/tethys/pkg/eth/tracking"
 	"strconv"
 	"time"
 
@@ -31,6 +32,8 @@ type clientSession struct {
 
 	clientProfile *eth.ClientProfile
 	clientStatus  *eth.ClientStatus
+
+	memPool tracking.MemPool
 
 	newHeadsPublisher *natsutil.Publisher[web3.NewHead]
 
@@ -130,13 +133,25 @@ func (cs *clientSession) connect(ctx context.Context) error {
 	cs.clientProfile = clientProfile
 	cs.clientStatus = initialStatus
 
+	// init the mempool
+	memPool, err := tracking.NewNatsMemPool(stateManager.MemPool)
+	if err != nil {
+		return errors.Annotate(err, "failed to initialise mem pool")
+	}
+
+	cs.memPool = memPool
+
 	// subscribe and publish new heads
 	if err = cs.buildNewHeadsPublisher(); err != nil {
 		return errors.Annotate(err, "failed to build new heads publisher")
 	}
-
 	if err = cs.subscribeToNewHeads(sessionCtx); err != nil {
 		return errors.Annotate(err, "failed to subscribe to new heads")
+	}
+
+	// subscribe to pending transactions
+	if err = cs.subscribeToPendingTransactions(sessionCtx); err != nil {
+		return errors.Annotate(err, "failed to subscribe to pending transactions")
 	}
 
 	// start listening for rpc requests from NATS
@@ -317,13 +332,81 @@ func (cs *clientSession) subscribeToNewHeads(ctx context.Context) error {
 	return nil
 }
 
+func (cs *clientSession) subscribeToPendingTransactions(ctx context.Context) error {
+	// subscribe for new heads
+	requestCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	subId, err := cs.client.SubscribeToPendingTransactions(requestCtx)
+	if err != nil {
+		return errors.Annotate(err, "failed to subscribe to new heads")
+	}
+
+	cs.subscriptionIds = append(cs.subscriptionIds, subId)
+
+	//
+	newPendingTransactions := cs.client.HandleSubscription(subId)
+
+	cs.group.Go(func() error {
+		running := true
+		for running {
+			select {
+			case <-ctx.Done():
+				running = false
+			case notification, ok := <-newPendingTransactions:
+				running = ok
+				if notification != nil {
+					cs.onNewPendingTransaction(notification)
+				}
+			}
+		}
+
+		cs.log.Debug("newPendingTransactions subscription closed")
+
+		return nil
+	})
+
+	return nil
+}
+
+func (cs *clientSession) onNewPendingTransaction(notification *web3.SubscriptionNotification) {
+	var hash string
+	if err := notification.UnmarshalResult(&hash); err != nil {
+		cs.log.
+			WithError(err).
+			Error("failed to unmarshal new pending transaction result")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := cs.client.GetTransactionByHash(ctx, hash)
+	if err != nil {
+		cs.log.
+			WithError(err).
+			WithField("hash", hash).
+			Error("failed to retrieve tx")
+		return
+	}
+
+	err = cs.memPool.Add(hash, tx)
+	if err != nil {
+		cs.log.
+			WithError(err).
+			WithField("hash", hash).
+			Error("failed to add tx to mem pool")
+		return
+	}
+}
+
 func (cs *clientSession) onNewHead(notification *web3.SubscriptionNotification) {
 	var newHead web3.NewHead
 	err := notification.UnmarshalResult(&newHead)
 	if err != nil {
-		cs.log.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("failed to unmarshal new head result")
+		cs.log.
+			WithError(err).
+			Error("failed to unmarshal new head result")
 		return
 	}
 

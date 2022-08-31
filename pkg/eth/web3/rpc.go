@@ -88,6 +88,15 @@ func unmarshal[T any](resp *jsonrpc.Response, proto *T) error {
 	return json.Unmarshal(resp.Result, proto)
 }
 
+func (c *Client) GetTransactionByHash(ctx context.Context, hash string) ([]byte, error) {
+	resp, err := c.Invoke(ctx, "eth_getTransactionByHash", []any{hash})
+	if err != nil {
+		return nil, err
+	}
+	// todo handle json rpc error
+	return resp.Result, nil
+}
+
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	resp, err := c.Invoke(ctx, "eth_blockNumber", nil)
 	if err != nil {

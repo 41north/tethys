@@ -78,6 +78,10 @@ func (c *Client) SubscribeToNewHeads(context context.Context) (string, error) {
 	return c.Subscribe(context, []any{"newHeads"})
 }
 
+func (c *Client) SubscribeToPendingTransactions(context context.Context) (string, error) {
+	return c.Subscribe(context, []any{"newPendingTransactions"})
+}
+
 func (c *Client) handleRequest(req *jsonrpc.Request) {
 	if req.Method != "eth_subscription" {
 		log.Errorf("unexpected request received: %v", req)
