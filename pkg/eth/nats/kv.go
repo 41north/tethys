@@ -2,6 +2,9 @@ package nats
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/41north/tethys/pkg/jsonrpc"
 
 	"github.com/41north/tethys/pkg/eth"
 	natsutil "github.com/41north/tethys/pkg/nats"
@@ -87,10 +90,13 @@ type StatusStore = natsutil.KeyValue[eth.ClientStatus]
 
 type ProfileStore = natsutil.KeyValue[eth.ClientProfile]
 
+type ResponseStore = natsutil.KeyValue[jsonrpc.Response]
+
 type StateManager struct {
-	Opts     Options
-	Status   StatusStore
-	Profiles ProfileStore
+	Opts      Options
+	Status    StatusStore
+	Profiles  ProfileStore
+	Responses ResponseStore
 }
 
 func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager, error) {
@@ -111,10 +117,16 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 		return nil, errors.Annotate(err, "failed to init profile store")
 	}
 
+	responseStore, err := initResponseStore(js, opts)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to init response store")
+	}
+
 	return &StateManager{
-		Opts:     opts,
-		Status:   statusStore,
-		Profiles: profileStore,
+		Opts:      opts,
+		Status:    statusStore,
+		Profiles:  profileStore,
+		Responses: responseStore,
 	}, nil
 }
 
@@ -141,5 +153,19 @@ func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, err
 
 	return natsutil.CreateKeyValue[eth.ClientProfile](js, &nats.KeyValueConfig{
 		Bucket: bucket,
+	})
+}
+
+func initResponseStore(js nats.JetStreamContext, opts Options) (ResponseStore, error) {
+	bucket := fmt.Sprintf("eth_%d_%d_proxy_responses", opts.NetworkId, opts.ChainId)
+
+	if !opts.Create {
+		return natsutil.GetKeyValue[jsonrpc.Response](js, bucket)
+	}
+
+	return natsutil.CreateKeyValue[jsonrpc.Response](js, &nats.KeyValueConfig{
+		Bucket: bucket,
+		// todo make configurable
+		TTL: 1 * time.Hour,
 	})
 }
