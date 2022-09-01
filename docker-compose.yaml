@@ -17,12 +17,12 @@ services:
     image: gcr.io/prysmaticlabs/prysm/beacon-chain:v3.0.0
     restart: unless-stopped
     user: "${HOST_UID}:${HOST_GID}"
-    command: --datadir=/data
+    command: --datadir=/data/sepolia
       --rpc-host=0.0.0.0
       --monitoring-host=0.0.0.0
       --execution-endpoint=http://erigon:8551
       --sepolia
-      --jwt-secret=/erigon-data/jwt.hex
+      --jwt-secret=/erigon-data/sepolia/jwt.hex
       --accept-terms-of-use
       --genesis-state=/genesis.ssz
       --grpc-gateway-host="0.0.0.0"
@@ -54,9 +54,9 @@ services:
     user: "${HOST_UID}:${HOST_GID}"
     command: erigon
       --chain=sepolia
-      --datadir=/erigon-data
+      --datadir=/erigon-data/sepolia
       --torrent.download.slots=7
-      --http.api="eth,net,erigon,ots"
+      --http.api="eth,web3,net,erigon,ots"
       --ws
       --http.corsdomain="*"
       --http.addr="0.0.0.0"
@@ -89,7 +89,6 @@ services:
       - "erigon"
 
   nats:
-    container_name: nats
     build:
       context: docker/images/nats
     ports:
@@ -100,7 +99,6 @@ services:
       - tethys
 
   proxy:
-    container_name: proxy
     image: 41north/tethys-proxy:dev
     restart: unless-stopped
     depends_on:
