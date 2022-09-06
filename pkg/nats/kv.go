@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/41north/go-async/pkg/async"
+	"github.com/41north/go-async"
 
 	"github.com/nats-io/nats.go"
 	"github.com/viney-shih/go-cache"
