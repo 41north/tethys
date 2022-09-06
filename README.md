@@ -1,7 +1,6 @@
 # Tethys
 
 ![Build](https://github.com/41north/tethys/actions/workflows/ci.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/41north/tethys/badge.svg?branch=feat/readme)](https://coveralls.io/github/41north/go-async?branch=feat/readme)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Documentation
