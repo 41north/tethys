@@ -17,9 +17,7 @@ http://localhost:6060/pkg/github.com/41north/tethys
 
 ## Installation
 
-```bash
-$ go get -u github.com/41north/tethys
-```
+TBD
 
 ## Quick Start
 
