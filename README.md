@@ -1,7 +1,6 @@
 # Tethys
 
 ![Build](https://github.com/41north/tethys/actions/workflows/ci.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/41north/tethys/badge.svg?branch=feat/readme)](https://coveralls.io/github/41north/go-async?branch=feat/readme)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ## Documentation
