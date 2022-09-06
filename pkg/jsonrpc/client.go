@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/41north/go-async/pkg/async"
+	"github.com/41north/go-async"
 
 	"github.com/41north/tethys/pkg/util"
 	"github.com/google/uuid"
