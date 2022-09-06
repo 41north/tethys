@@ -34,15 +34,9 @@
     pre-commit-hooks,
     ...
   } @ inputs: let
-    inherit (flake-utils.lib) eachSystem flattenTree mkApp;
+    inherit (flake-utils.lib) eachDefaultSystem flattenTree mkApp;
   in
-    eachSystem
-    [
-      "aarch64-linux"
-      "aarch64-darwin"
-      "x86_64-darwin"
-      "x86_64-linux"
-    ]
+    eachDefaultSystem
     (system: let
       pkgs = import nixpkgs {
         inherit system;
@@ -56,7 +50,15 @@
       inherit (pkgs) dockerTools buildGoModule;
       inherit (pkgs.stdenv) isLinux;
       inherit (pkgs.lib) lists fakeSha256 licenses platforms;
+      inherit (pkgs.devshell) mkShell;
       inherit (import ./nix/lib {inherit pkgs;}) pkgWithCategory buildGoApp;
+
+      linters = with pkgs; [
+        alejandra # https://github.com/kamadorueda/alejandra
+        gofumpt # https://github.com/mvdan/gofumpt
+        nodePackages.prettier # https://prettier.io/
+        treefmt # https://github.com/numtide/treefmt
+      ];
 
       # devshell command categories
       dev = pkgWithCategory "dev";
@@ -64,6 +66,19 @@
       formatter = pkgWithCategory "formatters";
       util = pkgWithCategory "utils";
     in {
+      checks = {
+        format =
+          pkgs.runCommandNoCC "treefmt" {
+            nativeBuildInputs = linters;
+          } ''
+            # keep timestamps so that treefmt is able to detect mtime changes
+            cp --no-preserve=mode --preserve=timestamps -r ${self} source
+            cd source
+            HOME=$TMPDIR treefmt --fail-on-change
+            touch $out
+          '';
+      };
+
       # nix build .#<app>
       packages = let
         vendorSha256 = "sha256-ryIdOXIbIelmJtPbGfqpVD+yTDiyWgl5sF4wefYc5ns=";
@@ -97,37 +112,26 @@
           };
         };
 
-      # nix develop
-      devShell = pkgs.devshell.mkShell {
+      devShells.default = mkShell {
         # TODO: Not recognized properly, research why
         # inherit (self.checks.${system}.pre-commit-check) shellHook;
 
-        env = [
-          # disable CGO for now
-          {
-            name = "CGO_ENABLED";
-            value = "0";
-          }
-        ];
         packages = with pkgs;
           [
-            alejandra # https://github.com/kamadorueda/alejandra
             delve # https://github.com/go-delve/delve
             go_1_19 # https://go.dev/
             go-ethereum # https://geth.ethereum.org/
-            gofumpt # https://github.com/mvdan/gofumpt
             gotools # https://go.googlesource.com/tools
             jq # https://stedolan.github.io/jq/
             just # https://github.com/casey/just
             nats-server # https://github.com/nats-io/nats-server
             nats-top # https://github.com/nats-io/nats-top
             natscli # https://nats.io/
-            nodePackages.prettier # https://prettier.io/
             protobuf # https://github.com/protocolbuffers/protobuf
             protoc-gen-go # https://pkg.go.dev/google.golang.org/protobuf
-            treefmt # https://github.com/numtide/treefmt
             websocat # https://github.com/vi/websocat
           ]
+          ++ linters
           ++ lists.optionals isLinux [
             # for Darwin docker should be installed separately
             docker
