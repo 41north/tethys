@@ -172,19 +172,5 @@
           drv = self.packages.tethys-sidecar;
         };
       };
-
-      # nix flake check
-      # TODO: Once CI is configured, add proper hooks and checks
-      checks = {
-        pre-commit-check = pre-commit-hooks.lib.${system}.run {
-          src = ./.;
-          default_stages = ["manual" "push"];
-          hooks = {
-            alejandra.enable = true;
-            prettier.enable = true;
-            hadolint.enable = true;
-          };
-        };
-      };
     });
 }
