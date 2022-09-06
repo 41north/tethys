@@ -1,4 +1,6 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+github.com/41north/go-async v0.0.0-20220906151044-1e015110d018 h1:h+M2vHBGbNdDYlswYDq4CUNodkgHyBKq5mCMoZ//UVA=
+github.com/41north/go-async v0.0.0-20220906151044-1e015110d018/go.mod h1:k5NH+7d3pVe+lyAM1kmQFK+SF+jrB1HoL5kFjua73BM=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/alecthomas/kong v0.6.1 h1:1kNhcFepkR+HmasQpbiKDLylIL8yh5B5y1zPp5bJimA=

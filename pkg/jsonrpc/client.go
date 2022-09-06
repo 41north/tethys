@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/41north/go-async/pkg/async"
+
 	"github.com/41north/tethys/pkg/util"
 	"github.com/google/uuid"
 	"github.com/juju/errors"
@@ -89,7 +91,7 @@ func newCloseHandler(conn *websocket.Conn, delegate func(code int, message strin
 type invocation struct {
 	key    string
 	req    Request
-	result chan util.Result[Response]
+	result chan async.Result[*Response]
 }
 
 func newInvocation(key string, req Request) invocation {
@@ -97,18 +99,18 @@ func newInvocation(key string, req Request) invocation {
 		key: key,
 		req: req,
 		// size 1 to prevent rendezvous and improve throughput
-		result: make(chan util.Result[Response], 1),
+		result: make(chan async.Result[*Response], 1),
 	}
 }
 
 func (i invocation) onError(err error) {
 	defer close(i.result)
-	i.result <- util.NewResultErr[Response](err)
+	i.result <- async.NewResultErr[*Response](err)
 }
 
 func (i invocation) onResponse(resp *Response) {
 	defer close(i.result)
-	i.result <- util.NewResult[Response](resp)
+	i.result <- async.NewResult[*Response](resp)
 }
 
 func (i invocation) cancel() {
@@ -381,7 +383,7 @@ func (c *Client) Invoke(ctx context.Context, req Request, resp *Response) error 
 
 	// wait for response
 	result := <-inv.result
-	invResp, err := result.Value()
+	invResp, err := result.Unwrap()
 
 	if err == nil {
 		// copy values from invocation response
