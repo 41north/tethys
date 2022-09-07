@@ -2,7 +2,6 @@ package nats
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/41north/tethys/pkg/jsonrpc"
 
@@ -13,13 +12,6 @@ import (
 )
 
 type Option = func(opts *Options) error
-
-func Create(create bool) Option {
-	return func(opts *Options) error {
-		opts.Create = create
-		return nil
-	}
-}
 
 func NetworkAndChainId(networkId uint64, chainId uint64) Option {
 	return func(opts *Options) error {
@@ -60,8 +52,6 @@ type bucketConfigProfiles struct {
 }
 
 type Options struct {
-	Create bool
-
 	NetworkId uint64
 	ChainId   uint64
 
@@ -71,17 +61,16 @@ type Options struct {
 
 func GetDefaultOptions() Options {
 	return Options{
-		Create:    false,
 		NetworkId: 1,
 		ChainId:   1,
 
 		BucketConfigStatuses: bucketConfigStatuses{
-			Format:  "eth_%d_%d_client_statuses",
+			Format:  "eth_%d_%d_client_status",
 			History: 12,
 		},
 
 		BucketConfigProfiles: bucketConfigProfiles{
-			Format: "eth_%d_%d_client_profiles",
+			Format: "eth_%d_%d_client_profile",
 		},
 	}
 }
@@ -133,39 +122,15 @@ func NewStateManager(js nats.JetStreamContext, options ...Option) (*StateManager
 func initStatusStore(js nats.JetStreamContext, opts Options) (StatusStore, error) {
 	config := opts.BucketConfigStatuses
 	bucket := fmt.Sprintf(config.Format, opts.NetworkId, opts.ChainId)
-
-	if !opts.Create {
-		return natsutil.GetKeyValue[eth.ClientStatus](js, bucket)
-	}
-
-	return natsutil.CreateKeyValue[eth.ClientStatus](js, &nats.KeyValueConfig{
-		Bucket:  bucket,
-		History: config.History,
-	})
+	return natsutil.GetKeyValue[eth.ClientStatus](js, bucket)
 }
 
 func initProfileStore(js nats.JetStreamContext, opts Options) (ProfileStore, error) {
 	bucket := fmt.Sprintf(opts.BucketConfigProfiles.Format, opts.NetworkId, opts.ChainId)
-
-	if !opts.Create {
-		return natsutil.GetKeyValue[eth.ClientProfile](js, bucket)
-	}
-
-	return natsutil.CreateKeyValue[eth.ClientProfile](js, &nats.KeyValueConfig{
-		Bucket: bucket,
-	})
+	return natsutil.GetKeyValue[eth.ClientProfile](js, bucket)
 }
 
 func initResponseStore(js nats.JetStreamContext, opts Options) (ResponseStore, error) {
 	bucket := fmt.Sprintf("eth_%d_%d_proxy_responses", opts.NetworkId, opts.ChainId)
-
-	if !opts.Create {
-		return natsutil.GetKeyValue[jsonrpc.Response](js, bucket)
-	}
-
-	return natsutil.CreateKeyValue[jsonrpc.Response](js, &nats.KeyValueConfig{
-		Bucket: bucket,
-		// todo make configurable
-		TTL: 1 * time.Hour,
-	})
+	return natsutil.GetKeyValue[jsonrpc.Response](js, bucket)
 }

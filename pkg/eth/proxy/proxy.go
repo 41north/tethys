@@ -14,8 +14,8 @@ const (
 	DefaultNatsUrl                    = "ns://127.0.0.1:4222"
 	DefaultNatsEmbedded               = false
 	DefaultNatsEmbeddedConfigPath     = ""
-	DefaultBucketClientStatusFormat   = "eth_%d_%d_client_statuses"
-	DefaultBucketClientProfilesFormat = "eth_%d_%d_client_profiles"
+	DefaultBucketClientStatusFormat   = "eth_%d_%d_client_status"
+	DefaultBucketClientProfilesFormat = "eth_%d_%d_client_profile"
 	DefaultMaxDistanceFromHead        = 3
 )
 

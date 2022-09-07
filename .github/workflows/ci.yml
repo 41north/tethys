@@ -20,7 +20,7 @@ jobs:
         os: [ 'ubuntu-20.04', 'macos-latest', 'windows-latest' ]
         go: [ '1.19' ]
     runs-on: ${{ matrix.os }}
-    name: Build (Go ${{ matrix.go }}, OS ${{ matrix.os }})
+    name: Build (Go ${{ matrix.go }}, OS ${{ matrix.os }}, Arch ${{ matrix.architecture }})
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go

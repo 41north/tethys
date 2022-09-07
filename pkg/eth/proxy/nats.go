@@ -79,7 +79,6 @@ func connectNats(opts Options) error {
 	stateManager, err = natseth.NewStateManager(
 		jsContext,
 		natseth.NetworkAndChainId(opts.NetworkId, opts.ChainId),
-		natseth.Create(true),
 		natseth.BucketStatusesFormat(opts.BucketClientStatusesFormat),
 		natseth.BucketProfilesFormat(opts.BucketClientProfilesFormat),
 	)
@@ -92,10 +91,16 @@ func connectNats(opts Options) error {
 }
 
 func closeNats() {
+	if natsConn == nil {
+		return
+	}
 	natsConn.Close()
 }
 
 func closeNatsServer() {
+	if ns == nil {
+		return
+	}
 	ns.Shutdown()
 	ns.WaitForShutdown()
 }

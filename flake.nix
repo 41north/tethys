@@ -93,7 +93,7 @@
 
       # nix build .#<app>
       packages = let
-        vendorSha256 = "sha256-JEBEjjiDRwyNb9woG0QEqbpBXQf0TPeSLrt57trIxXQ=";
+        vendorSha256 = "sha256-ddu7cpLU8MiEwJ3laIUoG3VdPbeZAv0KofGXpMjJUxg=";
       in
         flattenTree rec {
           tethys-proxy = buildGoApp {
@@ -143,6 +143,7 @@
             protoc-gen-go # https://pkg.go.dev/google.golang.org/protobuf
             websocat # https://github.com/vi/websocat
             tf
+            terragrunt
           ]
           ++ linters
           ++ lists.optionals isLinux [

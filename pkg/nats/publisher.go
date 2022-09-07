@@ -47,11 +47,7 @@ func (p Publisher[T]) PublishAsyncRaw(payload json.RawMessage, opts ...nats.PubO
 func NewPublisher[T any](
 	js nats.JetStreamContext,
 	subject string,
-	init func(js nats.JetStreamContext) error,
 ) (*Publisher[T], error) {
-	if err := init(js); err != nil {
-		return nil, errors.Annotate(err, "failed to initialise publisher")
-	}
 	return &Publisher[T]{
 		Subject: subject,
 		js:      js,

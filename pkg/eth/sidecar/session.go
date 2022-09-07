@@ -419,25 +419,10 @@ func (cs *clientSession) buildNewHeadsPublisher() error {
 	networkId := strconv.FormatUint(cp.NetworkId, 10)
 	chainId := strconv.FormatUint(cp.ChainId, 10)
 
-	subject := natsutil.SubjectName("eth", "newHeads", networkId, chainId, cv.Name, version, cp.Id)
+	subject := natsutil.SubjectName("eth", networkId, chainId, "newHeads", cv.Name, version, cp.Id)
 
 	publisher, err := natsutil.NewPublisher[web3.NewHead](
 		natsJs, subject,
-		func(js nats.JetStreamContext) error {
-			streamConfig := &nats.StreamConfig{
-				Name:              fmt.Sprintf("eth_%s_%s_newHeads", networkId, chainId),
-				Description:       fmt.Sprintf("ETH newHeads for networkId %s and chainId %s", networkId, chainId),
-				Subjects:          []string{natsutil.SubjectName("eth", "newHeads", networkId, chainId, "*", "*", "*")},
-				MaxMsgsPerSubject: 128,
-			}
-
-			_, err := js.AddStream(streamConfig)
-			if err != nil {
-				return errors.Annotate(err, "failed to create new heads stream")
-			}
-
-			return nil
-		},
 	)
 
 	cs.newHeadsPublisher = publisher
