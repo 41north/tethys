@@ -39,9 +39,9 @@
     nixpkgs-terraform-providers-bin,
     ...
   } @ inputs: let
-    inherit (flake-utils.lib) eachDefaultSystem flattenTree mkApp;
+    inherit (flake-utils.lib) eachSystem flattenTree mkApp;
   in
-    eachDefaultSystem
+    eachSystem ["x86_64-linux" "x86_64-darwin"]
     (system: let
       pkgs = import nixpkgs {
         inherit system;
