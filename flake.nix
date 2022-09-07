@@ -55,6 +55,7 @@
           (import ./nix/overlays)
         ];
       };
+      ethereumPkgs = ethereum-nix.packages.${system};
 
       inherit (pkgs) dockerTools buildGoModule;
       inherit (pkgs.stdenv) isLinux;
@@ -115,6 +116,7 @@
 
         packages = with pkgs;
           [
+            (lib.hiPrio ethereumPkgs.prysm) # https://github.com/prysmaticlabs/prysm
             delve # https://github.com/go-delve/delve
             go_1_19 # https://go.dev/
             go-ethereum # https://geth.ethereum.org/
