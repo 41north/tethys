@@ -18,6 +18,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
+    nixpkgs-terraform-providers-bin = {
+      url = "github:nix-community/nixpkgs-terraform-providers-bin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     pre-commit-hooks = {
@@ -32,6 +36,7 @@
     nixpkgs,
     flake-utils,
     pre-commit-hooks,
+    nixpkgs-terraform-providers-bin,
     ...
   } @ inputs: let
     inherit (flake-utils.lib) eachDefaultSystem flattenTree mkApp;
@@ -65,6 +70,13 @@
       linter = pkgWithCategory "linters";
       formatter = pkgWithCategory "formatters";
       util = pkgWithCategory "utils";
+
+      # terraform
+      terraformProvidersBin = nixpkgs-terraform-providers-bin.legacyPackages.${system};
+
+      tf = pkgs.terraform.withPlugins (p: [
+        terraformProvidersBin.providers.nats-io.jetstream
+      ]);
     in {
       checks = {
         format =
@@ -130,6 +142,7 @@
             protobuf # https://github.com/protocolbuffers/protobuf
             protoc-gen-go # https://pkg.go.dev/google.golang.org/protobuf
             websocat # https://github.com/vi/websocat
+            tf
           ]
           ++ linters
           ++ lists.optionals isLinux [
@@ -144,6 +157,7 @@
             (dev nats-top)
             (dev natscli)
             (dev protobuf)
+            (dev tf)
 
             (formatter alejandra)
             (formatter gofumpt)
