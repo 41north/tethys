@@ -52,11 +52,11 @@
         ];
       };
 
-      inherit (pkgs) dockerTools buildGoModule;
+      inherit (pkgs) dockerTools;
       inherit (pkgs.stdenv) isLinux;
       inherit (pkgs.lib) lists fakeSha256 licenses platforms;
       inherit (pkgs.devshell) mkShell;
-      inherit (import ./nix/lib {inherit pkgs;}) pkgWithCategory buildGoApp;
+      inherit (import ./nix/lib {inherit pkgs;}) pkgWithCategory buildGoApp buildLayeredImage;
 
       linters = with pkgs; [
         alejandra # https://github.com/kamadorueda/alejandra
@@ -98,12 +98,12 @@
         flattenTree rec {
           tethys-proxy = buildGoApp {
             inherit vendorSha256;
-            name = "tethys-proxy";
+            pname = "tethys-proxy";
             src = self;
             package = "cmd/proxy";
           };
-          tethys-proxy-docker = dockerTools.buildLayeredImage {
-            name = "41north/${tethys-proxy.name}";
+          tethys-proxy-docker = buildLayeredImage {
+            name = "41north/${tethys-proxy.pname}";
             tag = "dev";
             maxLayers = 15;
             created = "now";
@@ -111,12 +111,12 @@
           };
           tethys-sidecar = buildGoApp {
             inherit vendorSha256;
-            name = "tethys-sidecar";
+            pname = "tethys-sidecar";
             src = self;
             package = "cmd/sidecar";
           };
-          tethys-sidecar-docker = dockerTools.buildLayeredImage {
-            name = "41north/${tethys-sidecar.name}";
+          tethys-sidecar-docker = buildLayeredImage {
+            name = "41north/${tethys-sidecar.pname}";
             tag = "dev";
             maxLayers = 15;
             created = "now";

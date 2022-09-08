@@ -1,19 +1,45 @@
-{pkgs}:
-with (pkgs.lib); let
-  inherit (pkgs) buildGo119Module;
+{pkgs}: let
+  inherit (pkgs.stdenv) isDarwin isLinux hostPlatform buildPlatform;
+
+  goArch =
+    if isLinux
+    then "amd64"
+    else "arm64";
+
+  buildGo119Module =
+    if isLinux
+    then pkgs.buildGo119Module
+    else
+      pkgs.buildGo119Module.override {
+        stdenv = pkgs.pkgsCross.aarch64-multiplatform.stdenv;
+        go =
+          pkgs.go_1_19
+          // {
+            GOOS = "linux";
+            GOARCH = goArch;
+          };
+      };
+
+  buildLayeredImage =
+    if isLinux
+    then pkgs.dockerTools.buildLayeredImage
+    else pkgs.pkgsCross.aarch64-multiplatform.dockerTools.buildLayeredImage;
 in {
+  inherit buildLayeredImage;
+
   # Creates a devshell category with a given pkg
   pkgWithCategory = category: package: {inherit package category;};
 
   # Builds a go application with common settings
   buildGoApp = {
-    name,
+    pname,
+    version ? "dev",
     src,
     vendorSha256,
     package,
   }:
     buildGo119Module {
-      inherit name src vendorSha256;
+      inherit pname version src vendorSha256;
       ldflags = ["-s" "-w"];
       # glibc 2.34 instroduced a stricter check, causing the program
       # to bork inside the docker image with:
@@ -25,7 +51,7 @@ in {
       meta = {
         homepage = "https://github.com/41north/tethys";
         description = "";
-        license = licenses.unlicense;
+        license = pkgs.lib.licenses.unlicense;
       };
     };
 }
