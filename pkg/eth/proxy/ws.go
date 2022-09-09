@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/go-jsonrpc"
+
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"

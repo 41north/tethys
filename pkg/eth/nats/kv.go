@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/go-jsonrpc"
 
 	"github.com/41north/tethys/pkg/eth"
 	natsutil "github.com/41north/tethys/pkg/nats"

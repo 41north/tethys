@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/41north/go-jsonrpc"
+
 	"github.com/41north/tethys/pkg/eth"
 	natseth "github.com/41north/tethys/pkg/eth/nats"
 	"github.com/viney-shih/go-cache"
@@ -16,7 +18,6 @@ import (
 	"github.com/juju/errors"
 
 	"github.com/41north/tethys/pkg/eth/tracking"
-	"github.com/41north/tethys/pkg/jsonrpc"
 	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
@@ -77,7 +78,7 @@ func closeRouter() {
 func invoke(ctx context.Context, req jsonrpc.Request, resp *jsonrpc.Response) {
 	// set the resp id to match the request
 	resp.Id = req.Id
-	resp.JsonRpc = "2.0"
+	resp.Version = "2.0"
 
 	// check if the method is supported
 	method, ok := proxyMethods[req.Method]

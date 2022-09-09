@@ -2,7 +2,6 @@ package methods
 
 import (
 	"github.com/41north/tethys/pkg/eth/tracking"
-	"github.com/41north/tethys/pkg/jsonrpc"
 	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/41north/tethys/pkg/proxy"
 )
@@ -34,7 +33,7 @@ func ethMethods(
 	cacheRouteOpt := proxy.RouteOpts(natsutil.CacheRoute(true))
 
 	overrideLatestBlockOpt := func(idx int) proxy.MethodOpt {
-		return proxy.BeforeRequest(jsonrpc.ReplaceParameterByIndex(idx, overrideLatestBlockParam(chain)))
+		return proxy.BeforeRequest(proxy.ReplaceParameterByIndex(idx, overrideLatestBlockParam(chain)))
 	}
 
 	return []proxy.Method{

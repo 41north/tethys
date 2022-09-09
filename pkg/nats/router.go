@@ -7,10 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/41north/go-jsonrpc"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/viney-shih/go-cache"
 
-	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/juju/errors"
 )
 
@@ -66,7 +67,7 @@ func (r *staticRouter) Request(req jsonrpc.Request, resp *jsonrpc.Response, time
 
 func (r *staticRouter) RequestWithContext(_ context.Context, _ jsonrpc.Request, resp *jsonrpc.Response, _ ...RouteOpt) error {
 	resp.Id = r.resp.Id
-	resp.JsonRpc = r.resp.JsonRpc
+	resp.Version = r.resp.Version
 	resp.Result = r.resp.Result
 	resp.Error = r.resp.Error
 	return nil
@@ -79,7 +80,7 @@ func NewStaticResult(result any) Router {
 	}
 
 	resp := jsonrpc.Response{
-		JsonRpc: "2.0",
+		Version: "2.0",
 		Result:  bytes,
 	}
 
@@ -88,7 +89,7 @@ func NewStaticResult(result any) Router {
 
 func NewStaticError(error jsonrpc.Error) Router {
 	resp := jsonrpc.Response{
-		JsonRpc: "2.0",
+		Version: "2.0",
 		Error:   &error,
 	}
 	return &staticRouter{resp: resp}

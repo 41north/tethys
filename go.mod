@@ -17,11 +17,13 @@ require (
 )
 
 require (
-	github.com/41north/go-async v0.0.0-20220906213725-64b67b00c35d // indirect
+	github.com/41north/go-async v0.0.0-20220907210046-9b90237424e4 // indirect
+	github.com/41north/go-jsonrpc v0.0.0-20220910094651-39bc726f124c // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-redis/redis/v8 v8.11.4 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/matoous/go-nanoid v1.5.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
@@ -29,7 +31,7 @@ require (
 	github.com/vmihailenco/go-tinylfu v0.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503 // indirect
 	golang.org/x/exp v0.0.0-20210526181343-b47a03e3048a // indirect
-	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
+	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/go-jsonrpc"
 	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/juju/errors"
 )
@@ -10,8 +10,8 @@ type MethodOpt = func(opts *MethodOpts) error
 
 type MethodOpts struct {
 	routeOpts     []natsutil.RouteOpt
-	beforeRequest jsonrpc.RequestTransform
-	afterResponse jsonrpc.ResponseTransform
+	beforeRequest RequestTransform
+	afterResponse ResponseTransform
 }
 
 func RouteOpts(routeOpts ...natsutil.RouteOpt) MethodOpt {
@@ -21,14 +21,14 @@ func RouteOpts(routeOpts ...natsutil.RouteOpt) MethodOpt {
 	}
 }
 
-func BeforeRequest(transform jsonrpc.RequestTransform) MethodOpt {
+func BeforeRequest(transform RequestTransform) MethodOpt {
 	return func(opts *MethodOpts) error {
 		opts.beforeRequest = transform
 		return nil
 	}
 }
 
-func AfterResponse(transform jsonrpc.ResponseTransform) MethodOpt {
+func AfterResponse(transform ResponseTransform) MethodOpt {
 	return func(opts *MethodOpts) error {
 		opts.afterResponse = transform
 		return nil
