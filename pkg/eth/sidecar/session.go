@@ -64,11 +64,8 @@ func (cs *clientSession) connect(ctx context.Context) error {
 	cs.ctx = ctx
 
 	closeCh := make(chan interface{}, 1)
-	closeHandler := func(code int, message string) {
-		cs.log.WithFields(log.Fields{
-			"code":    code,
-			"message": message,
-		}).Debug("client connection has been closed")
+	closeHandler := func(err error) {
+		cs.log.WithError(err).Debug("client connection has been closed")
 		closeCh <- true
 	}
 

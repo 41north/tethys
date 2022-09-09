@@ -2,17 +2,17 @@ package web3
 
 import (
 	"context"
-	"encoding/json"
 	"math/big"
 
-	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/go-jsonrpc"
+
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/juju/errors"
 	"golang.org/x/sync/errgroup"
 )
 
 type Client struct {
-	rpc          *jsonrpc.Client
+	rpc          jsonrpc.Client
 	sm           *subManager
 	group        *errgroup.Group
 	closeHandler func(code int, text string)
@@ -23,21 +23,24 @@ func NewClient(url string) (*Client, error) {
 		group: new(errgroup.Group),
 	}
 
-	rpc, err := jsonrpc.NewClient(url)
-	if err != nil {
-		return nil, err
+	dialer := jsonrpc.WebSocketDialer{
+		Url: url,
 	}
-
-	client.rpc = rpc
+	client.rpc = jsonrpc.NewClient(dialer)
 
 	return &client, nil
 }
 
 func (c *Client) Connect(
-	closeHandler func(code int, message string),
+	closeHandler func(error error),
 ) error {
 	c.sm = &subManager{}
 	serverRequestsCh := make(chan *jsonrpc.Request, 256)
+
+	c.rpc.SetCloseHandler(closeHandler)
+	c.rpc.SetRequestHandler(func(req jsonrpc.Request) {
+		serverRequestsCh <- &req
+	})
 
 	c.group.Go(func() error {
 		for request := range serverRequestsCh {
@@ -46,7 +49,7 @@ func (c *Client) Connect(
 		return nil
 	})
 
-	return c.rpc.Connect(serverRequestsCh, closeHandler)
+	return c.rpc.Connect()
 }
 
 func (c *Client) Close() {
@@ -60,19 +63,11 @@ func (c *Client) Invoke(
 	params any,
 	resp *jsonrpc.Response,
 ) error {
-	req := jsonrpc.Request{
-		Method: method,
+	req, err := jsonrpc.NewRequest(method, params)
+	if err != nil {
+		return err
 	}
-
-	if params != nil {
-		bytes, err := json.Marshal(params)
-		if err != nil {
-			return errors.Annotate(err, "failed to marshal params")
-		}
-		req.Params = bytes
-	}
-
-	return c.rpc.Invoke(ctx, req, resp)
+	return c.rpc.SendContext(ctx, *req, resp)
 }
 
 func (c *Client) InvokeRequest(
@@ -80,7 +75,7 @@ func (c *Client) InvokeRequest(
 	req jsonrpc.Request,
 	resp *jsonrpc.Response,
 ) error {
-	return c.rpc.Invoke(ctx, req, resp)
+	return c.rpc.SendContext(ctx, req, resp)
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {

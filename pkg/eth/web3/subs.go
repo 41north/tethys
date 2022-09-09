@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/41north/tethys/pkg/jsonrpc"
+	"github.com/41north/go-jsonrpc"
+
 	log "github.com/sirupsen/logrus"
 )
 

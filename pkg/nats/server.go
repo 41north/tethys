@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/41north/go-jsonrpc"
+
 	"github.com/41north/tethys/pkg/eth/web3"
-	"github.com/41north/tethys/pkg/jsonrpc"
 	"github.com/41north/tethys/pkg/util"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
@@ -200,7 +201,7 @@ func respond(msg *nats.Msg, resp *jsonrpc.Response) {
 func respondWithError(msg *nats.Msg, request *jsonrpc.Request, error *jsonrpc.Error) {
 	response := jsonrpc.Response{
 		Error:   error,
-		JsonRpc: "2.0",
+		Version: "2.0",
 	}
 	if request != nil {
 		response.Id = request.Id
