@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/creachadair/jrpc2"
+
 	"github.com/41north/go-jsonrpc"
 
 	"github.com/41north/tethys/pkg/eth/web3"
@@ -155,12 +157,7 @@ func (srv *RpcServer) Close() {
 }
 
 func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
-	var request jsonrpc.Request
-	err := json.Unmarshal(msg.Data, &request)
-
-	// capture original request id
-	id := request.Id
-
+	requests, err := jrpc2.ParseRequests(msg.Data)
 	if err != nil {
 		respondWithError(msg, &request, &jsonrpc.Error{
 			Code:    -32700,
@@ -169,11 +166,14 @@ func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
 		return
 	}
 
+	// capture original request id
+	id := request.Id
+
 	go func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		var resp jsonrpc.Response
+		var resp jrpc2.Response
 		if err := srv.client.InvokeRequest(ctx, request, &resp); err != nil {
 			respondWithError(msg, &request, &jsonrpc.Error{
 				Code:    -32603,

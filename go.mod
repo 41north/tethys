@@ -3,9 +3,12 @@ module github.com/41north/tethys
 go 1.19
 
 require (
+	github.com/41north/go-async v0.0.0-20220907210046-9b90237424e4
+	github.com/41north/go-jsonrpc v0.0.0-20220910094651-39bc726f124c
 	github.com/alecthomas/kong v0.6.1
+	github.com/creachadair/jrpc2 v0.41.2
+	github.com/creachadair/wschannel v0.0.0-20220916180746-961b4549de6c
 	github.com/ethereum/go-ethereum v1.10.23
-	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/juju/errors v1.0.0
 	github.com/nats-io/nats-server/v2 v2.8.4
@@ -13,15 +16,14 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/tidwall/btree v1.4.2
 	github.com/viney-shih/go-cache v1.1.4
-	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde
+	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 )
 
 require (
-	github.com/41north/go-async v0.0.0-20220907210046-9b90237424e4 // indirect
-	github.com/41north/go-jsonrpc v0.0.0-20220910094651-39bc726f124c // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-redis/redis/v8 v8.11.4 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/matoous/go-nanoid v1.5.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect

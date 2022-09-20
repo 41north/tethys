@@ -2,8 +2,9 @@ package web3
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
+
+	"github.com/creachadair/jrpc2"
 
 	"github.com/41north/go-jsonrpc"
 
@@ -79,14 +80,14 @@ func (c *Client) SubscribeToNewHeads(context context.Context) (string, error) {
 	return c.Subscribe(context, []any{"newHeads"})
 }
 
-func (c *Client) handleRequest(req *jsonrpc.Request) {
-	if req.Method != "eth_subscription" {
+func (c *Client) handleRequest(req *jrpc2.Request) {
+	if req.Method() != "eth_subscription" {
 		log.Errorf("unexpected request received: %v", req)
 		return
 	}
 
 	var notification SubscriptionNotification
-	err := json.Unmarshal(req.Params, &notification)
+	err := req.UnmarshalParams(notification)
 	if err != nil {
 		log.WithError(err).
 			WithField("request", req).

@@ -2,54 +2,53 @@ package web3
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 
-	"github.com/41north/go-jsonrpc"
-
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/wschannel"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/juju/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 type Client struct {
-	rpc          jsonrpc.Client
+	url          string
+	rpc          *jrpc2.Client
 	sm           *subManager
-	group        *errgroup.Group
 	closeHandler func(code int, text string)
 }
 
-func NewClient(url string) (*Client, error) {
-	client := Client{
-		group: new(errgroup.Group),
-	}
-
-	dialer := jsonrpc.WebSocketDialer{
-		Url: url,
-	}
-	client.rpc = jsonrpc.NewClient(dialer)
-
-	return &client, nil
+func NewClient(url string) Client {
+	return Client{url: url}
 }
 
 func (c *Client) Connect(
 	closeHandler func(error error),
 ) error {
+	// TODO use a different channel based on the transport specified in the url
+	// TODO close handler
+	conn, err := wschannel.Dial(c.url, nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-conn.Done()
+		// TODO refine the concept of close handler
+		closeHandler(nil)
+	}()
+
+	c.rpc = jrpc2.NewClient(conn, &jrpc2.ClientOptions{
+		OnNotify: c.onNotify,
+	})
+
 	c.sm = &subManager{}
-	serverRequestsCh := make(chan *jsonrpc.Request, 256)
 
-	c.rpc.SetCloseHandler(closeHandler)
-	c.rpc.SetRequestHandler(func(req jsonrpc.Request) {
-		serverRequestsCh <- &req
-	})
+	return nil
+}
 
-	c.group.Go(func() error {
-		for request := range serverRequestsCh {
-			c.handleRequest(request)
-		}
-		return nil
-	})
-
-	return c.rpc.Connect()
+func (c *Client) onNotify(req *jrpc2.Request) {
+	c.handleRequest(req)
 }
 
 func (c *Client) Close() {
@@ -61,25 +60,27 @@ func (c *Client) Invoke(
 	ctx context.Context,
 	method string,
 	params any,
-	resp *jsonrpc.Response,
+	resp *jrpc2.Response,
 ) error {
-	req, err := jsonrpc.NewRequest(method, params)
-	if err != nil {
-		return err
-	}
-	return c.rpc.SendContext(ctx, *req, resp)
+	return c.rpc.CallResult(ctx, method, params, resp)
 }
 
 func (c *Client) InvokeRequest(
 	ctx context.Context,
-	req jsonrpc.Request,
-	resp *jsonrpc.Response,
+	req jrpc2.Request,
+	resp *jrpc2.Response,
 ) error {
-	return c.rpc.SendContext(ctx, req, resp)
+	// we unmarshal to raw message to avoid unmarshalling just to marshal again
+	var params json.RawMessage
+	if err := req.UnmarshalParams(params); err != nil {
+		return err
+	}
+
+	return c.rpc.CallResult(ctx, req.Method(), params, resp)
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "eth_blockNumber", nil, &resp); err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 }
 
 func (c *Client) NetVersion(ctx context.Context) (string, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "net_version", nil, &resp); err != nil {
 		return "", err
 	}
@@ -107,7 +108,7 @@ func (c *Client) NetVersion(ctx context.Context) (string, error) {
 }
 
 func (c *Client) ChainId(ctx context.Context) (string, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "eth_chainId", nil, &resp); err != nil {
 		return "", err
 	}
@@ -117,7 +118,7 @@ func (c *Client) ChainId(ctx context.Context) (string, error) {
 }
 
 func (c *Client) NodeInfo(ctx context.Context) (*NodeInfo, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "admin_nodeInfo", nil, &resp); err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func (c *Client) NodeInfo(ctx context.Context) (*NodeInfo, error) {
 }
 
 func (c *Client) Web3ClientVersion(ctx context.Context) (*ClientVersion, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "web3_clientVersion", nil, &resp); err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func (c *Client) Web3ClientVersion(ctx context.Context) (*ClientVersion, error) 
 }
 
 func (c *Client) SyncProgress(ctx context.Context) (bool, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "eth_syncing", nil, &resp); err != nil {
 		return false, err
 	}
@@ -152,7 +153,7 @@ func (c *Client) SyncProgress(ctx context.Context) (bool, error) {
 }
 
 func (c *Client) LatestBlock(ctx context.Context) (*Block, error) {
-	var resp jsonrpc.Response
+	var resp jrpc2.Response
 	if err := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false}, &resp); err != nil {
 		return nil, err
 	}
