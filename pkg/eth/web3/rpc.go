@@ -2,7 +2,6 @@ package web3
 
 import (
 	"context"
-	"encoding/json"
 	"math/big"
 
 	"github.com/creachadair/jrpc2"
@@ -56,40 +55,27 @@ func (c *Client) Close() {
 	c.rpc.Close()
 }
 
-func (c *Client) Invoke(
+func (c *Client) CallResult(
 	ctx context.Context,
 	method string,
 	params any,
-	resp *jrpc2.Response,
+	result any,
 ) error {
-	return c.rpc.CallResult(ctx, method, params, resp)
+	return c.rpc.CallResult(ctx, method, params, result)
 }
 
-func (c *Client) InvokeRequest(
+func (c *Client) Batch(
 	ctx context.Context,
-	req jrpc2.Request,
-	resp *jrpc2.Response,
-) error {
-	// we unmarshal to raw message to avoid unmarshalling just to marshal again
-	var params json.RawMessage
-	if err := req.UnmarshalParams(params); err != nil {
-		return err
-	}
-
-	return c.rpc.CallResult(ctx, req.Method(), params, resp)
+	specs []jrpc2.Spec,
+) ([]*jrpc2.Response, error) {
+	return c.rpc.Batch(ctx, specs)
 }
 
 func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "eth_blockNumber", nil, &resp); err != nil {
-		return nil, err
-	}
-
 	var hex string
-	if err := resp.UnmarshalResult(&hex); err != nil {
+	if err := c.CallResult(ctx, "eth_blockNumber", nil, &hex); err != nil {
 		return nil, err
 	}
-
 	blockNumber, ok := math.ParseBig256(hex)
 	if !ok {
 		return nil, errors.Errorf("Failed to parse block number: %s", blockNumber)
@@ -98,66 +84,39 @@ func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 }
 
 func (c *Client) NetVersion(ctx context.Context) (string, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "net_version", nil, &resp); err != nil {
-		return "", err
-	}
 	var result string
-	err := resp.UnmarshalResult(&result)
+	err := c.CallResult(ctx, "net_version", nil, &result)
 	return result, err
 }
 
 func (c *Client) ChainId(ctx context.Context) (string, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "eth_chainId", nil, &resp); err != nil {
-		return "", err
-	}
 	var result string
-	err := resp.UnmarshalResult(&result)
+	err := c.CallResult(ctx, "eth_chainId", nil, &result)
 	return result, err
 }
 
-func (c *Client) NodeInfo(ctx context.Context) (*NodeInfo, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "admin_nodeInfo", nil, &resp); err != nil {
-		return nil, err
-	}
+func (c *Client) NodeInfo(ctx context.Context) (NodeInfo, error) {
 	var result NodeInfo
-	err := resp.UnmarshalResult(&result)
-	return &result, err
+	err := c.CallResult(ctx, "admin_nodeInfo", nil, &result)
+	return result, err
 }
 
-func (c *Client) Web3ClientVersion(ctx context.Context) (*ClientVersion, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "web3_clientVersion", nil, &resp); err != nil {
-		return nil, err
-	}
+func (c *Client) Web3ClientVersion(ctx context.Context) (ClientVersion, error) {
 	var result string
-	if err := resp.UnmarshalResult(&result); err != nil {
-		return nil, err
+	if err := c.CallResult(ctx, "web3_clientVersion", nil, &result); err != nil {
+		return ClientVersion{}, err
 	}
-	cv, err := ParseClientVersion(result)
-	return &cv, err
+	return ParseClientVersion(result)
 }
 
 func (c *Client) SyncProgress(ctx context.Context) (bool, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "eth_syncing", nil, &resp); err != nil {
-		return false, err
-	}
-	var syncing bool
-	if err := resp.UnmarshalResult(&syncing); err == nil {
-		return syncing, nil
-	}
-	return syncing, nil
+	var result bool
+	err := c.CallResult(ctx, "eth_syncing", nil, &result)
+	return result, err
 }
 
 func (c *Client) LatestBlock(ctx context.Context) (*Block, error) {
-	var resp jrpc2.Response
-	if err := c.Invoke(ctx, "eth_getBlockByNumber", []interface{}{"latest", false}, &resp); err != nil {
-		return nil, err
-	}
 	var result Block
-	err := resp.UnmarshalResult(&result)
+	err := c.CallResult(ctx, "eth_getBlockByNumber", []interface{}{"latest", false}, &result)
 	return &result, err
 }

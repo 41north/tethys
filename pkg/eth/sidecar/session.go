@@ -56,10 +56,7 @@ func newClientSession(opts Options) clientSession {
 }
 
 func (cs *clientSession) connect(ctx context.Context) error {
-	client, err := web3.NewClient(cs.url)
-	if err != nil {
-		return errors.Annotate(err, "failed to create eth client")
-	}
+	client := web3.NewClient(cs.url)
 
 	cs.ctx = ctx
 
@@ -79,7 +76,7 @@ func (cs *clientSession) connect(ctx context.Context) error {
 			return nil
 
 		default:
-			err = client.Connect(closeHandler)
+			err := client.Connect(closeHandler)
 			if err != nil {
 				log.WithError(err).Errorf("failed to connect to web3 client, retrying in %v", retryDelay)
 				<-time.After(retryDelay)
@@ -92,7 +89,7 @@ func (cs *clientSession) connect(ctx context.Context) error {
 		}
 	}
 
-	cs.client = client
+	cs.client = &client
 
 	sessionCtx, sessionCancel := context.WithCancel(ctx)
 	defer sessionCancel()
@@ -172,27 +169,24 @@ func (cs *clientSession) buildClientProfile() (*eth.ClientProfile, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var nodeInfo *web3.NodeInfo
+	var nodeInfo web3.NodeInfo
+	var clientVersion web3.ClientVersion
+
 	// admin api is typically only available for direct connections
 	if cs.connectionType == eth.ConnectionTypeDirect {
 		nodeInfo, err = cs.client.NodeInfo(ctx)
 		if err != nil {
 			return nil, errors.Annotate(err, "Could not retrieve client node info")
 		}
-	}
-
-	var clientVersion web3.ClientVersion
-	if nodeInfo != nil {
 		clientVersion, err = nodeInfo.ParseClientVersion()
 		if err != nil {
 			return nil, errors.Annotate(err, "failed to parse client version from node info")
 		}
 	} else {
-		cv, err := cs.client.Web3ClientVersion(ctx)
+		clientVersion, err = cs.client.Web3ClientVersion(ctx)
 		if err != nil {
 			return nil, errors.Annotate(err, "failed to retrieve client version")
 		}
-		clientVersion = *cv
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)

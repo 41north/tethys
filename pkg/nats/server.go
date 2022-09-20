@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/creachadair/jrpc2"
@@ -157,34 +158,62 @@ func (srv *RpcServer) Close() {
 }
 
 func (srv *RpcServer) onRequest(ctx context.Context, msg *nats.Msg) {
-	requests, err := jrpc2.ParseRequests(msg.Data)
-	if err != nil {
-		respondWithError(msg, &request, &jsonrpc.Error{
-			Code:    -32700,
-			Message: "Parse error",
-		})
+	requests, _ := jrpc2.ParseRequests(msg.Data)
+	// TODO handle error
+
+	if len(requests) == 0 {
+		// empty batch response
+		if err := msg.Respond([]byte("[]")); err != nil {
+			log.WithError(err).Error("failed to send error response to nats")
+		}
 		return
 	}
 
-	// capture original request id
-	id := request.Id
-
 	go func() {
+		// create the context
+		// TODO make the timeout configurable
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		var resp jrpc2.Response
-		if err := srv.client.InvokeRequest(ctx, request, &resp); err != nil {
-			respondWithError(msg, &request, &jsonrpc.Error{
-				Code:    -32603,
-				Message: "Internal error",
-			})
-			return
+		// generate specs for each request
+		specs := make([]jrpc2.Spec, len(requests))
+		for idx, request := range requests {
+			specs[idx] = jrpc2.Spec{Method: request.Method, Params: request.Params}
 		}
-		// replace id with original
-		resp.Id = id
 
-		respond(msg, &resp)
+		// execute a batch request against the client
+		responses, err := srv.client.Batch(ctx, specs)
+		if err != nil {
+			// TODO send a proper error response
+		}
+
+		isBatchResponse := len(responses) > 1
+
+		// compile the response
+		// TODO compile the byte slice directly
+		var sb strings.Builder
+		if isBatchResponse {
+			sb.WriteString("[")
+		}
+
+		for idx, response := range responses {
+			// ensure the responses have the correct request id
+			response.SetID(requests[idx].ID)
+			bytes, _ := response.MarshalJSON()
+			// TODO handle error
+			sb.Write(bytes)
+			if idx < (len(responses) - 1) {
+				sb.WriteString(",")
+			}
+		}
+
+		if isBatchResponse {
+			sb.WriteString("]")
+		}
+
+		if err := msg.Respond([]byte(sb.String())); err != nil {
+			log.WithError(err).Error("failed to response to message")
+		}
 	}()
 }
 

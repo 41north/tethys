@@ -6,8 +6,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 
-	"github.com/41north/go-jsonrpc"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,22 +51,14 @@ func (sm *subManager) close() {
 }
 
 func (c *Client) Subscribe(ctx context.Context, params []interface{}) (string, error) {
-	var resp jsonrpc.Response
-	if err := c.Invoke(ctx, "eth_subscribe", params, &resp); err != nil {
-		return "", err
-	}
 	var result string
-	err := resp.UnmarshalResult(&result)
+	err := c.CallResult(ctx, "eth_subscribe", params, &result)
 	return result, err
 }
 
 func (c *Client) Unsubscribe(ctx context.Context, subscriptionId string) (bool, error) {
-	var resp jsonrpc.Response
-	if err := c.Invoke(ctx, "eth_unsubscribe", []any{subscriptionId}, &resp); err != nil {
-		return false, err
-	}
 	var result bool
-	err := resp.UnmarshalResult(&result)
+	err := c.CallResult(ctx, "eth_unsubscribe", []any{subscriptionId}, &result)
 	return result, err
 }
 

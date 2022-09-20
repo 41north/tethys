@@ -66,7 +66,7 @@ type ClientProfile struct {
 	ChainId   uint64 `json:"chainId"`
 
 	ClientVersion web3.ClientVersion `json:"clientVersion"`
-	NodeInfo      *web3.NodeInfo     `json:"nodeInfo,omitempty"` // unavailable from third party providers e.g. alchemy
+	NodeInfo      web3.NodeInfo      `json:"nodeInfo,omitempty"` // unavailable from third party providers e.g. alchemy
 }
 
 func (cp ClientProfile) String() string {
