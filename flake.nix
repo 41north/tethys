@@ -5,21 +5,29 @@
     substituters = [
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
+      "https://pre-commit-hooks.cachix.org"
+      "https://ethereum-nix.cachix.org"
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc="
+      "ethereum-nix.cachix.org-1:mpmQuO1myAs3CXDBLh8uQy4QDFtemaDKLD4UKmVjByE="
     ];
   };
 
   inputs = {
+    # sources
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    ethereum-nix.url = "github:41north/ethereum.nix";
+
+    # utilities
     devshell = {
       url = "github:numtide/devshell";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.flake-utils.follows = "flake-utils";
@@ -30,6 +38,7 @@
     self,
     devshell,
     nixpkgs,
+    ethereum-nix,
     flake-utils,
     pre-commit-hooks,
     ...
@@ -42,10 +51,11 @@
         inherit system;
         overlays = [
           devshell.overlay
+          ethereum-nix.overlays.default
           (import ./nix/overlays)
-          (import ./nix/pkgs)
         ];
       };
+      ethereumPkgs = ethereum-nix.packages.${system};
 
       inherit (pkgs) dockerTools buildGoModule;
       inherit (pkgs.stdenv) isLinux;
@@ -66,24 +76,11 @@
       formatter = pkgWithCategory "formatters";
       util = pkgWithCategory "utils";
     in {
-      checks = {
-        format =
-          pkgs.runCommandNoCC "treefmt" {
-            nativeBuildInputs = linters;
-          } ''
-            # keep timestamps so that treefmt is able to detect mtime changes
-            cp --no-preserve=mode --preserve=timestamps -r ${self} source
-            cd source
-            HOME=$TMPDIR treefmt --fail-on-change
-            touch $out
-          '';
-      };
-
       # nix build .#<app>
       packages = let
         vendorSha256 = "sha256-JEBEjjiDRwyNb9woG0QEqbpBXQf0TPeSLrt57trIxXQ=";
       in
-        flattenTree rec {
+        rec {
           tethys-proxy = buildGoApp {
             inherit vendorSha256;
             name = "tethys-proxy";
@@ -112,16 +109,19 @@
           };
         };
 
+      # nix develop
       devShells.default = mkShell {
         # TODO: Not recognized properly, research why
         # inherit (self.checks.${system}.pre-commit-check) shellHook;
 
         packages = with pkgs;
           [
+            (lib.hiPrio ethereumPkgs.prysm) # https://github.com/prysmaticlabs/prysm
             delve # https://github.com/go-delve/delve
             go_1_19 # https://go.dev/
             go-ethereum # https://geth.ethereum.org/
             gotools # https://go.googlesource.com/tools
+            hivemind # https://github.com/DarthSim/hivemind
             jq # https://stedolan.github.io/jq/
             just # https://github.com/casey/just
             nats-server # https://github.com/nats-io/nats-server
@@ -171,6 +171,20 @@
           name = "tethys-sidecar";
           drv = self.packages.tethys-sidecar;
         };
+      };
+
+      # nix flake check
+      checks = {
+        format =
+          pkgs.runCommandNoCC "treefmt" {
+            nativeBuildInputs = linters;
+          } ''
+            # keep timestamps so that treefmt is able to detect mtime changes
+            cp --no-preserve=mode --preserve=timestamps -r ${self} source
+            cd source
+            HOME=$TMPDIR treefmt --fail-on-change
+            touch $out
+          '';
       };
     });
 }

@@ -55,12 +55,3 @@ nix-check:
 clean:
   rm -rf ./result*
 alias c := clean
-
-# Alias docker-compose up
-up:
-  mkdir -p $PRYSM_DATA $ERIGON_DATA
-  docker-compose up -d
-
-# Alias for docker-compose down
-down:
-  docker-compose down --remove-orphans -v

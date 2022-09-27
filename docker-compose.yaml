@@ -1,9 +1,5 @@
 version: "3.8"
 
-configs:
-  genesis.ssz:
-    file: ${PRYSM_CHECKPOINT}/genesis.ssz
-
 networks:
   tethys:
     name: tethys
@@ -13,82 +9,8 @@ networks:
         - subnet: 172.16.254.0/28
 
 services:
-  prysm:
-    image: gcr.io/prysmaticlabs/prysm/beacon-chain:v3.0.0
-    restart: unless-stopped
-    user: "${HOST_UID}:${HOST_GID}"
-    command: --datadir=/data/sepolia
-      --rpc-host=0.0.0.0
-      --monitoring-host=0.0.0.0
-      --execution-endpoint=http://erigon:8551
-      --sepolia
-      --jwt-secret=/erigon-data/sepolia/jwt.hex
-      --accept-terms-of-use
-      --genesis-state=/genesis.ssz
-      --grpc-gateway-host="0.0.0.0"
-      --grpc-gateway-corsdomain='*'
-      --checkpoint-sync-url=https://sepolia.checkpoint-sync.ethdevops.io
-      --genesis-beacon-api-url=https://sepolia.checkpoint-sync.ethdevops.io
-    networks:
-      - tethys
-    ports:
-      - "3500:3500"
-      - "13000:13000"
-      - "12000:12000/udp"
-    volumes:
-      - type: bind
-        source: "${ERIGON_DATA}"
-        target: /erigon-data
-      - type: bind
-        source: "${PRYSM_DATA}"
-        target: /data
-    depends_on:
-      - "erigon"
-    mem_swappiness: 0
-    configs:
-      - genesis.ssz
-
-  erigon:
-    image: otterscan/erigon:v2022.08.03-otterscan
-    restart: unless-stopped
-    user: "${HOST_UID}:${HOST_GID}"
-    command: erigon
-      --chain=sepolia
-      --datadir=/erigon-data/sepolia
-      --torrent.download.slots=7
-      --http.api="eth,web3,net,erigon,ots"
-      --ws
-      --http.corsdomain="*"
-      --http.addr="0.0.0.0"
-      --http.vhosts='*'
-      --authrpc.addr="erigon"
-      --authrpc.vhosts="erigon"
-    networks:
-      - tethys
-    ports:
-      - "8545:8545"
-      - "30303:30303/tcp"
-      - "30303:30303/udp"
-      - "42069:42069/tcp"
-      - "42069:42069/udp"
-    volumes:
-      - type: bind
-        source: "${ERIGON_DATA}"
-        target: /erigon-data
-    mem_swappiness: 0
-
-  otterscan:
-    image: otterscan/otterscan:v2022.04.01-otterscan
-    restart: unless-stopped
-    networks:
-      - tethys
-    ports:
-      - "3000:80"
-    depends_on:
-      - "prysm"
-      - "erigon"
-
   nats:
+    container_name: nats
     build:
       context: docker/images/nats
     ports:
@@ -98,19 +20,169 @@ services:
     networks:
       - tethys
 
+  geth-bootnode:
+    container_name: geth-bootnode
+    build:
+      context: docker/images/geth
+      args:
+        - ACCOUNT_PASSWORD=${GETH_ACCOUNT_PASSWORD}
+    command:
+      --nodekeyhex="b0ac22adcad37213c7c565810a50f1772291e7b0ce53fb73e7ec2a3c75bc13b5"
+      --nodiscover
+      --ipcdisable
+      --networkid=${GETH_NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+    networks:
+      - tethys
+
+  geth-miner:
+    container_name: geth-miner
+    build:
+      context: docker/images/geth
+    depends_on:
+      - geth-bootnode
+    command:
+      --bootnodes="enode://af22c29c316ad069cf48a09a4ad5cf04a251b411e45098888d114c6dd7f489a13786620d5953738762afa13711d4ffb3b19aa5de772d8af72f851f7e9c5b164a@geth-bootnode:30303"
+      --mine
+      --miner.threads=1
+      --networkid=${GETH_NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+    networks:
+      tethys:
+
+  geth-rpc-1:
+    container_name: geth-rpc-1
+    build:
+      context: docker/images/geth
+    depends_on:
+      - geth-bootnode
+    command:
+      --bootnodes="enode://af22c29c316ad069cf48a09a4ad5cf04a251b411e45098888d114c6dd7f489a13786620d5953738762afa13711d4ffb3b19aa5de772d8af72f851f7e9c5b164a@geth-bootnode:30303"
+      --http
+      --http.vhosts="*"
+      --http.addr="0.0.0.0"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
+      --http.corsdomain="*"
+      --http.rpcprefix="/"
+      --ws
+      --ws.addr="0.0.0.0"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
+      --ws.rpcprefix="/"
+      --networkid=${GETH_NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+    ports:
+      - "8545:8545"
+      - "8546:8546"
+    networks:
+      - tethys
+
+  geth-rpc-1-sidecar:
+    container_name: geth-rpc-1-sidecar
+    image: 41north/tethys-sidecar:dev
+    depends_on:
+      - nats
+      - geth-rpc-1
+    networks:
+      - tethys
+    restart: on-failure
+    command:
+      - eth
+    environment:
+      NATS_URL: ns://nats:4222
+      WEB3_URL: ws://geth-rpc-1:8546
+
+  geth-rpc-2:
+    container_name: geth-rpc-2
+    build:
+      context: docker/images/geth
+    depends_on:
+      - geth-bootnode
+    command:
+      --bootnodes="enode://af22c29c316ad069cf48a09a4ad5cf04a251b411e45098888d114c6dd7f489a13786620d5953738762afa13711d4ffb3b19aa5de772d8af72f851f7e9c5b164a@geth-bootnode:30303"
+      --http
+      --http.vhosts="*"
+      --http.addr="0.0.0.0"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
+      --http.corsdomain="*"
+      --http.rpcprefix="/"
+      --ws
+      --ws.addr="0.0.0.0"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
+      --ws.rpcprefix="/"
+      --networkid=${GETH_NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+    networks:
+      - tethys
+
+  geth-rpc-2-sidecar:
+    container_name: geth-rpc-2-sidecar
+    image: 41north/tethys-sidecar:dev
+    depends_on:
+      - nats
+      - geth-rpc-2
+    networks:
+      - tethys
+    restart: on-failure
+    command:
+      - eth
+    environment:
+      NATS_URL: ns://nats:4222
+      WEB3_URL: ws://geth-rpc-2:8546
+
+  geth-rpc-3:
+    container_name: geth-rpc-3
+    build:
+      context: docker/images/geth
+    depends_on:
+      - geth-bootnode
+    command:
+      --bootnodes="enode://af22c29c316ad069cf48a09a4ad5cf04a251b411e45098888d114c6dd7f489a13786620d5953738762afa13711d4ffb3b19aa5de772d8af72f851f7e9c5b164a@geth-bootnode:30303"
+      --http
+      --http.vhosts="*"
+      --http.addr="0.0.0.0"
+      --http.api="eth,net,web3,debug,txpool,personal,admin"
+      --http.corsdomain="*"
+      --http.rpcprefix="/"
+      --ws
+      --ws.addr="0.0.0.0"
+      --ws.api="eth,net,web3,debug,txpool,personal,admin"
+      --ws.rpcprefix="/"
+      --networkid=${GETH_NETWORK_ID}
+      --netrestrict="172.16.254.0/28"
+    networks:
+      - tethys
+
+  geth-rpc-3-sidecar:
+    container_name: geth-rpc-3-sidecar
+    image: 41north/tethys-sidecar:dev
+    depends_on:
+      - nats
+      - geth-rpc-3
+    networks:
+      - tethys
+    restart: on-failure
+    command:
+      - eth
+    environment:
+      NATS_URL: ns://nats:4222
+      WEB3_URL: ws://geth-rpc-3:8546
+      WEB3_CONNECTION_TYPE: ConnectionTypeManaged
+      WEB3_CLIENT_ID: alchemy
+
   proxy:
+    container_name: proxy
     image: 41north/tethys-proxy:dev
-    restart: unless-stopped
     depends_on:
       - nats
     networks:
       - tethys
     ports:
       - "8080:8080"
+    restart: on-failure
     command:
       - eth
       - --log-level=debug
     environment:
       NATS_URL: ns://nats:4222
-      ETH_NETWORK_ID: 11155111 # sepolia
-      ETH_CHAIN_ID: 11155111
+      ETH_NETWORK_ID: 1214
+      ETH_CHAIN_ID: 1214
