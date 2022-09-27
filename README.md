@@ -36,6 +36,7 @@ The following is an initial high level list of things, in no particular order, t
 - [ ] Resilient logical subscriptions backed by one or more clients
 - [ ] Multi data center and multi regional deployment
 - [ ] Kubernetes operator
+- [ ] Aggressive caching where-ever it makes sense.
 
 ## Documentation
 
