@@ -1,6 +1,7 @@
 package methods
 
 import (
+	"github.com/41north/go-async"
 	"github.com/41north/tethys/pkg/eth/tracking"
 	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/41north/tethys/pkg/proxy"
@@ -14,8 +15,8 @@ const (
 
 func netMethods(chain *tracking.CanonicalChain) []proxy.Method {
 	return []proxy.Method{
-		proxy.NewMethod(NetVersion, natsutil.NewStaticResult(chain.NetworkId)),
-		proxy.NewMethod(NetListening, natsutil.NewStaticResult(true)),
-		proxy.NewMethod(NetPeerCount, natsutil.NewStaticResult(1)),
+		proxy.NewMethod(NetVersion, natsutil.NewStaticResult(async.NewResult[any](chain.NetworkId))),
+		proxy.NewMethod(NetListening, natsutil.NewStaticResult(async.NewResult[any](true))),
+		proxy.NewMethod(NetPeerCount, natsutil.NewStaticResult(async.NewResult[any](1))),
 	}
 }

@@ -1,6 +1,7 @@
 package methods
 
 import (
+	"github.com/41north/go-async"
 	natsutil "github.com/41north/tethys/pkg/nats"
 	"github.com/41north/tethys/pkg/proxy"
 )
@@ -16,6 +17,6 @@ const (
 func web3Methods(router natsutil.Router) []proxy.Method {
 	return []proxy.Method{
 		proxy.NewMethod(Web3Sha3, router),
-		proxy.NewMethod(Web3ClientVersion, natsutil.NewStaticResult(ClientVersion)),
+		proxy.NewMethod(Web3ClientVersion, natsutil.NewStaticResult(async.NewResult[any](ClientVersion))),
 	}
 }
